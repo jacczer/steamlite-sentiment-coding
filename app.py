@@ -27,15 +27,22 @@ def get_worksheet():
     """
     try:
         # Check if secrets are available
-        if "gsheets" not in st.secrets:
-            st.error("❌ Brak konfiguracji 'gsheets' w secrets!")
-            return None
-        
         if "SPREADSHEET_ID" not in st.secrets:
             st.error("❌ Brak 'SPREADSHEET_ID' w secrets!")
             return None
         
-        creds_info = st.secrets["gsheets"]
+        # Try to load credentials from JSON string or dict
+        if "service_account_json" in st.secrets:
+            # Method 1: Full JSON as string
+            import json
+            creds_info = json.loads(st.secrets["service_account_json"])
+        elif "gsheets" in st.secrets:
+            # Method 2: Dict with fields (for compatibility)
+            creds_info = dict(st.secrets["gsheets"])
+        else:
+            st.error("❌ Brak konfiguracji credentials w secrets! Dodaj 'service_account_json' lub 'gsheets'")
+            return None
+        
         creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         client = gspread.authorize(creds)
         
