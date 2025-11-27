@@ -12,6 +12,7 @@ from google.oauth2.service_account import Credentials
 
 # Configuration
 DATA_FILE = Path(__file__).parent / "data_to_code.json"
+DEFINITIONS_FILE = Path(__file__).parent.parent.parent.parent / "data" / "docs" / "sent_emo_definicje.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
@@ -295,12 +296,23 @@ def load_data():
         return json.load(f)
 
 
+def load_definitions():
+    """Load sentiment and emotion definitions from JSON file."""
+    try:
+        with open(DEFINITIONS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {"sentiments": {}, "emotions": {}}
+
+
 def initialize_session():
     """Initialize session state variables."""
     if 'screen' not in st.session_state:
         st.session_state.screen = 'start'
     if 'data' not in st.session_state:
         st.session_state.data = load_data()
+    if 'definitions' not in st.session_state:
+        st.session_state.definitions = load_definitions()
     if 'current_index' not in st.session_state:
         st.session_state.current_index = 0
     if 'session_elements' not in st.session_state:
@@ -407,13 +419,21 @@ def sentiment_coding_ui(text):
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
+    # Get definitions
+    definitions = st.session_state.definitions.get("sentiments", {})
+    
     # Create pills for each sentiment
     for key, data in SENTIMENTS.items():
+        # Get definition for tooltip
+        definition = definitions.get(key, {}).get("description", "")
+        
+        # Label with help icon
         value = st.pills(
             data['pl'],
             options=scale_options,
             default="Brak",
-            key=f"sentiment_{key}"
+            key=f"sentiment_{key}",
+            help=definition if definition else None
         )
         # Convert to numeric value (0-3)
         sentiment_values[key] = scale_options.index(value) if value else 0
@@ -448,6 +468,9 @@ def emotion_coding_ui(text):
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
+    # Get definitions
+    definitions = st.session_state.definitions.get("emotions", {})
+    
     # Create two columns for emotions
     col1, col2 = st.columns(2)
     
@@ -455,21 +478,25 @@ def emotion_coding_ui(text):
     
     with col1:
         for key, data in emotions_list[:4]:
+            definition = definitions.get(key, {}).get("description", "")
             value = st.pills(
                 f"{data['icon']} {data['pl']}",
                 options=scale_options,
                 default="Brak",
-                key=f"emotion_{key}"
+                key=f"emotion_{key}",
+                help=definition if definition else None
             )
             emotion_values[key] = scale_options.index(value) if value else 0
     
     with col2:
         for key, data in emotions_list[4:]:
+            definition = definitions.get(key, {}).get("description", "")
             value = st.pills(
                 f"{data['icon']} {data['pl']}",
                 options=scale_options,
                 default="Brak",
-                key=f"emotion_{key}"
+                key=f"emotion_{key}",
+                help=definition if definition else None
             )
             emotion_values[key] = scale_options.index(value) if value else 0
     
