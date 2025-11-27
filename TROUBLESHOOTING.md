@@ -90,27 +90,62 @@ Podczas kodowania, po kliknięciu "✅ Zapisz i kontynuuj":
    - Klucz kończy się na `\n-----END PRIVATE KEY-----\n`
    - Znaki nowej linii są zapisane jako `\n` (nie rzeczywiste nowe linie)
 
-**Przykład poprawnej konfiguracji:**
+**Przykład poprawnej konfiguracji (UWAGA: użyj POTRÓJNYCH cudzysłowów dla private_key!):**
 ```toml
 [gsheets]
 type = "service_account"
 project_id = "steamlite-api"
-private_key = "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgk...(reszta klucza)...encNWOg==\n-----END PRIVATE KEY-----\n"
+private_key = """-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgk...(reszta klucza na wielu liniach)...encNWOg==
+-----END PRIVATE KEY-----
+"""
 client_email = "steamlite-robot@steamlite-api.iam.gserviceaccount.com"
 ```
+
+**KRYTYCZNE:** `private_key` MUSI być w potrójnych cudzysłowach `"""` bo zawiera wiele linii!
 
 ---
 
 ### ✅ Weryfikacja secrets na Streamlit Cloud
 
-Pełna zawartość secrets powinna wyglądać tak:
+**UWAGA:** Skopiuj całą zawartość z pliku `example_secrets.toml` (między znacznikami `===`).
+
+Pełna zawartość secrets powinna wyglądać tak (zauważ POTRÓJNE cudzysłowy dla `private_key`):
 
 ```toml
 [gsheets]
 type = "service_account"
 project_id = "steamlite-api"
 private_key_id = "ca337c69ec99675a43a890cf3f5e8e7ca1fdd764"
-private_key = "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC3Z8YctQyftSUx\n9xmL65hcgH1XxRJNtyClbTpnXh68S4NU3ezE4o6lauli77tzzQzuYCS3/bV94Mui\nZOolfnZozSfZChSPj6oVeuDiNsYR0ZSNNq9BRsMqvhEcTWF7UwFtCiRvEbEBzYAX\nRD4Es1f4JrGA9+R2VeE9WUk0I030BoZPxXZh17jTYchk1FacwL9kfenWpZHUgHWU\nOiJTWna0ouhMHepVUEqQVvJWvmv+wvG7u7IzDbhYeuFHjqZSr3me9UH1xLM16luz\nJaGHjWvyH405aqnJM3pgSDiJ0Ku9Dnimnmw8UwIqGqEkqWERI9FsjGLijpVo1GPz\nuQCjVpLbAgMBAAECggEARC4MxOE9NyXVFPUCBzTm6ARQFE/LlR5twXGQk5q2nFMK\nGIODoFGEq9PJvSDXs53Xn8oX/FoRnSDzMoSHUrbnd+BEXvfTWucSWHfcn9uy2C7s\nJW7dyctvhDUyES5m/byGvC1YC/4sqjnl00BoOcEeA78Gn6YHxUH5wJ+vifVR5lPh\nXmkQRtVVRPvpx6Qm9r7xRpUzF5ory0pIliusDAyac9H7FuV74LqUg7JwU3J1W78E\n4XVPVYuXKeRXaJF+rJacmmb7uatg3Y8YwNUmtGYze12VQYaRLWlGGpKevZ+lszed\nNtie2hXTsh1NHU2kzLu1sRh21gcUiH3k+qC+GnKl+QKBgQDh0qFR3Sk6WXggFdOd\nC4C5emjADRSdEBiG6pT8UWebQY7UyDg5dEn/JAuGetTsDBB7Hhn1Pood/9Gt8LGX\n7iZuqg32VkCruA5Kdw1ID8lQ0VMgPWjaK6tdkmlT95Bzu4qs2tJ2ATwxkSo8/GlD\nMKdN+cw+fRPsfIduwFwOB1/ElwKBgQDP6gyhLuPZ6/Y3eH+kN3vFFi271iQnpA1F\n1zGE39geygaATZkEsm2wLcYpdjsi7nABfdKnX67rOtWtODFDPuokjaioThRmYz5y\nryqV1Dl/6ZG2Y+uBlcsSqnO17MVb4XkzIoTRLwIzcb7Fc9h9Ao7AHIhuTXr4HSWH\nIGj4q5IYXQKBgQDKLZ0WwQ4vWnjtKP17phfKd6ifAVcKQ6Xh7NYUjQFYhDpPkS6d\nadryHiBfd0t4RljfEZUl96cKssXUmCE4KBSqkX/Mo25lD3Vj//CZKuEPhUmKHNDq\nO5zCOtooPgZLR4YhugwhcHum2RPa5BWN/Vpcup+89pjG6rsKUhhYywtX4wKBgQCl\neeITZv5xsxuDiqQMTxxy//PmS8j6w9bMfzkqR/36g1ApTZk748bpMYVF+pOWea8r\ngLjn/X96OJlYBCExJCG2dgiF657Q3qwVGtUJ6p7Y70zJnT0TJeU6Ne9iG8/4ELwl\ntpN+6asWxrDO9iSXWjHDNPJg18nHL2tu4JyrTeI5AQKBgQCq5t0Thh3de+isI8/B\neyPh30iy/0BxQF+Kjh6z6+qLJekCMIar6o1sIWoJnW52Kws4VswtJ9xCiCWalOcK\nmxsWlNC8eU4GRkv6D5qQgxEmYAuyWR3CnAIJqdUhokLDIJed3pLBqO2uF1rFYhuf\nNhfjY3zIBFqQvKff7wmencNWOg==\n-----END PRIVATE KEY-----\n"
+private_key = """-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC3Z8YctQyftSUx
+9xmL65hcgH1XxRJNtyClbTpnXh68S4NU3ezE4o6lauli77tzzQzuYCS3/bV94Mui
+ZOolfnZozSfZChSPj6oVeuDiNsYR0ZSNNq9BRsMqvhEcTWF7UwFtCiRvEbEBzYAX
+RD4Es1f4JrGA9+R2VeE9WUk0I030BoZPxXZh17jTYchk1FacwL9kfenWpZHUgHWU
+OiJTWna0ouhMHepVUEqQVvJWvmv+wvG7u7IzDbhYeuFHjqZSr3me9UH1xLM16luz
+JaGHjWvyH405aqnJM3pgSDiJ0Ku9Dnimnmw8UwIqGqEkqWERI9FsjGLijpVo1GPz
+uQCjVpLbAgMBAAECggEARC4MxOE9NyXVFPUCBzTm6ARQFE/LlR5twXGQk5q2nFMK
+GIODoFGEq9PJvSDXs53Xn8oX/FoRnSDzMoSHUrbnd+BEXvfTWucSWHfcn9uy2C7s
+JW7dyctvhDUyES5m/byGvC1YC/4sqjnl00BoOcEeA78Gn6YHxUH5wJ+vifVR5lPh
+XmkQRtVVRPvpx6Qm9r7xRpUzF5ory0pIliusDAyac9H7FuV74LqUg7JwU3J1W78E
+4XVPVYuXKeRXaJF+rJacmmb7uatg3Y8YwNUmtGYze12VQYaRLWlGGpKevZ+lszed
+Ntie2hXTsh1NHU2kzLu1sRh21gcUiH3k+qC+GnKl+QKBgQDh0qFR3Sk6WXggFdOd
+C4C5emjADRSdEBiG6pT8UWebQY7UyDg5dEn/JAuGetTsDBB7Hhn1Pood/9Gt8LGX
+7iZuqg32VkCruA5Kdw1ID8lQ0VMgPWjaK6tdkmlT95Bzu4qs2tJ2ATwxkSo8/GlD
+MKdN+cw+fRPsfIduwFwOB1/ElwKBgQDP6gyhLuPZ6/Y3eH+kN3vFFi271iQnpA1F
+1zGE39geygaATZkEsm2wLcYpdjsi7nABfdKnX67rOtWtODFDPuokjaioThRmYz5y
+ryqV1Dl/6ZG2Y+uBlcsSqnO17MVb4XkzIoTRLwIzcb7Fc9h9Ao7AHIhuTXr4HSWH
+IGj4q5IYXQKBgQDKLZ0WwQ4vWnjtKP17phfKd6ifAVcKQ6Xh7NYUjQFYhDpPkS6d
+adryHiBfd0t4RljfEZUl96cKssXUmCE4KBSqkX/Mo25lD3Vj//CZKuEPhUmKHNDq
+O5zCOtooPgZLR4YhugwhcHum2RPa5BWN/Vpcup+89pjG6rsKUhhYywtX4wKBgQCl
+eeITZv5xsxuDiqQMTxxy//PmS8j6w9bMfzkqR/36g1ApTZk748bpMYVF+pOWea8r
+gLjn/X96OJlYBCExJCG2dgiF657Q3qwVGtUJ6p7Y70zJnT0TJeU6Ne9iG8/4ELwl
+tpN+6asWxrDO9iSXWjHDNPJg18nHL2tu4JyrTeI5AQKBgQCq5t0Thh3de+isI8/B
+eyPh30iy/0BxQF+Kjh6z6+qLJekCMIar6o1sIWoJnW52Kws4VswtJ9xCiCWalOcK
+mxsWlNC8eU4GRkv6D5qQgxEmYAuyWR3CnAIJqdUhokLDIJed3pLBqO2uF1rFYhuf
+NhfjY3zIBFqQvKff7wmencNWOg==
+-----END PRIVATE KEY-----
+"""
 client_email = "steamlite-robot@steamlite-api.iam.gserviceaccount.com"
 client_id = "100499984497557336964"
 auth_uri = "https://accounts.google.com/o/oauth2/auth"
@@ -121,6 +156,11 @@ universe_domain = "googleapis.com"
 
 SPREADSHEET_ID = "1ShqRuRy_-JE8iapy9P02sDZtIdZn4FO_mkTQT3N-9K4"
 ```
+
+**WAŻNE:** 
+- `private_key` używa POTRÓJNYCH cudzysłowów `"""` (nie pojedynczych `"`)
+- Klucz jest na wielu liniach (rzeczywiste linie, nie `\n`)
+- To jest format dla Streamlit Cloud - będzie działać poprawnie!
 
 ---
 
