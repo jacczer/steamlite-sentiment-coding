@@ -153,20 +153,55 @@ CUSTOM_CSS = """
         margin-bottom: 5px !important;
     }
     
-    /* Slider styling - jednolity kolor */
-    .stSlider > div > div > div {
-        background: #667eea !important;
+    /* Segmented control styling */
+    .stSegmentedControl {
+        margin-bottom: 20px;
     }
     
-    /* Hide current value label above slider (Brak/Niskie text shown above) */
-    .stSlider [data-testid="stThumbValue"] {
-        display: none !important;
+    .stSegmentedControl [data-testid="stWidgetLabel"] {
+        text-align: left !important;
+        font-size: 1rem !important;
+        color: #ffffff !important;
+        margin-bottom: 8px !important;
     }
     
-    /* Style for slider tick labels at bottom */
-    .stSlider [data-testid="stTickBar"] {
-        font-size: 0.8rem !important;
-        color: #a0a0a0 !important;
+    .stSegmentedControl button {
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stSegmentedControl button[aria-checked="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+    
+    /* Radio button styling as fallback */
+    .stRadio > div {
+        display: flex !important;
+        gap: 10px !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .stRadio label {
+        background: rgba(255,255,255,0.1) !important;
+        padding: 10px 20px !important;
+        border-radius: 10px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        border: 2px solid transparent !important;
+    }
+    
+    .stRadio label:hover {
+        background: rgba(102, 126, 234, 0.2) !important;
+        border-color: #667eea !important;
+    }
+    
+    .stRadio [data-testid="stWidgetLabel"] {
+        font-size: 1rem !important;
+        color: #ffffff !important;
+        margin-bottom: 10px !important;
     }
     
     /* Success message styling */
@@ -402,16 +437,20 @@ def sentiment_coding_ui(text):
     
     sentiment_values = {}
     
-    # Create sliders for each sentiment with centered label
+    # Scale options
+    scale_options = ["🟢 Brak/Niskie", "🟡 Średnie", "🔴 Wysokie"]
+    
+    # Create radio buttons for each sentiment
     for key, data in SENTIMENTS.items():
-        value = st.select_slider(
+        value = st.radio(
             data['pl'],
-            options=["Brak/Niskie", "Średnie", "Wysokie"],
-            value="Brak/Niskie",
-            key=f"sentiment_{key}"
+            options=scale_options,
+            index=0,
+            key=f"sentiment_{key}",
+            horizontal=True
         )
-        # Convert text to numeric value
-        sentiment_values[key] = ["Brak/Niskie", "Średnie", "Wysokie"].index(value)
+        # Convert to numeric value
+        sentiment_values[key] = scale_options.index(value)
     
     st.markdown("")
     
@@ -440,6 +479,9 @@ def emotion_coding_ui(text):
     
     emotion_values = {}
     
+    # Scale options
+    scale_options = ["🟢 Brak/Niskie", "🟡 Średnie", "🔴 Wysokie"]
+    
     # Create two columns for emotions
     col1, col2 = st.columns(2)
     
@@ -447,23 +489,25 @@ def emotion_coding_ui(text):
     
     with col1:
         for key, data in emotions_list[:4]:
-            value = st.select_slider(
+            value = st.radio(
                 f"{data['icon']} {data['pl']}",
-                options=["Brak/Niskie", "Średnie", "Wysokie"],
-                value="Brak/Niskie",
-                key=f"emotion_{key}"
+                options=scale_options,
+                index=0,
+                key=f"emotion_{key}",
+                horizontal=True
             )
-            emotion_values[key] = ["Brak/Niskie", "Średnie", "Wysokie"].index(value)
+            emotion_values[key] = scale_options.index(value)
     
     with col2:
         for key, data in emotions_list[4:]:
-            value = st.select_slider(
+            value = st.radio(
                 f"{data['icon']} {data['pl']}",
-                options=["Brak/Niskie", "Średnie", "Wysokie"],
-                value="Brak/Niskie",
-                key=f"emotion_{key}"
+                options=scale_options,
+                index=0,
+                key=f"emotion_{key}",
+                horizontal=True
             )
-            emotion_values[key] = ["Brak/Niskie", "Średnie", "Wysokie"].index(value)
+            emotion_values[key] = scale_options.index(value)
     
     st.markdown("")
     
