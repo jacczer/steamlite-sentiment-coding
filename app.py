@@ -70,12 +70,9 @@ def get_worksheet(_force_refresh=None):
         sh = client.open_by_key(SPREADSHEET_ID)
         worksheet = sh.sheet1  # pierwszy arkusz (first worksheet)
         
-        st.success(f"✅ Połączono z arkuszem: {sh.title}")
         return worksheet
     except Exception as e:
-        st.error(f"❌ Błąd połączenia z Google Sheets: {type(e).__name__}: {str(e)}")
-        import traceback
-        st.error(f"Szczegóły: {traceback.format_exc()}")
+        st.error(f"❌ Błąd połączenia z Google Sheets: {type(e).__name__}")
         return None
 
 
@@ -114,22 +111,13 @@ def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id=
             int(emotion_values.get("anger", 0))
         ]
         
-        # Debug: Show what we're trying to save
-        with st.expander("🔍 Debug - dane do zapisania", expanded=False):
-            st.write("Przygotowany wiersz:", row)
-            st.write("Liczba kolumn:", len(row))
-        
         # Append row to sheet
         ws.append_row(row, value_input_option='USER_ENTERED')
         
-        st.success(f"✅ Zapisano wiersz do arkusza (timestamp: {timestamp})")
         return True
         
     except Exception as e:
         st.error(f"❌ Błąd zapisu do Google Sheets: {type(e).__name__}")
-        st.error(f"Szczegóły: {str(e)}")
-        import traceback
-        st.error(f"Stack trace: {traceback.format_exc()}")
         return False
 
 
@@ -217,31 +205,6 @@ def start_screen():
        - **Średnie** (1)
        - **Wysokie** (2)
     """)
-    
-    st.markdown("---")
-    
-    # Test connection button
-    st.markdown("### 🔌 Test połączenia z Google Sheets")
-    col_test1, col_test2, col_test3 = st.columns([1, 1, 1])
-    with col_test1:
-        if st.button("🔄 Wyczyść cache", use_container_width=True):
-            st.cache_resource.clear()
-            st.success("Cache wyczyszczony! Kliknij 'Testuj połączenie'")
-            st.rerun()
-    with col_test2:
-        if st.button("🧪 Testuj połączenie", use_container_width=True):
-            # Force fresh connection by clearing cache first
-            st.cache_resource.clear()
-            with st.spinner("Sprawdzam połączenie..."):
-                ws = get_worksheet()
-                if ws:
-                    try:
-                        row_count = ws.row_count
-                        col_count = ws.col_count
-                        st.success(f"✅ Połączono! Arkusz ma {row_count} wierszy i {col_count} kolumn")
-                        st.info(f"📊 Nazwa arkusza: {ws.title}")
-                    except Exception as e:
-                        st.error(f"❌ Błąd odczytu arkusza: {e}")
     
     st.markdown("---")
     
