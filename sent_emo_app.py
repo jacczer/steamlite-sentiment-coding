@@ -1,7 +1,7 @@
 """
 Aplikacja Streamlit do manualnego kodowania sentymentu i emocji.
 #cd app/wer_llm/sent_emo_app
-streamlit run streamlit_app.py
+streamlit run sent_emo_app.py
 """
 import streamlit as st
 import json
