@@ -12,7 +12,7 @@ from google.oauth2.service_account import Credentials
 
 # Configuration
 DATA_FILE = Path(__file__).parent / "data_to_code.json"
-DEFINITIONS_FILE = Path(__file__).parent.parent.parent.parent / "data" / "docs" / "sent_emo_definicje.json"
+DEFINITIONS_FILE = Path(__file__).parent / "sent_emo_definicje.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
