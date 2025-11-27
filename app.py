@@ -6,7 +6,7 @@ streamlit run app.py
 import streamlit as st
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -26,15 +26,29 @@ def get_worksheet():
     Returns the first worksheet of the spreadsheet.
     """
     try:
+        # Check if secrets are available
+        if "gsheets" not in st.secrets:
+            st.error("❌ Brak konfiguracji 'gsheets' w secrets!")
+            return None
+        
+        if "SPREADSHEET_ID" not in st.secrets:
+            st.error("❌ Brak 'SPREADSHEET_ID' w secrets!")
+            return None
+        
         creds_info = st.secrets["gsheets"]
         creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         client = gspread.authorize(creds)
         
         SPREADSHEET_ID = st.secrets["SPREADSHEET_ID"]
         sh = client.open_by_key(SPREADSHEET_ID)
-        return sh.sheet1  # pierwszy arkusz (first worksheet)
+        worksheet = sh.sheet1  # pierwszy arkusz (first worksheet)
+        
+        st.success(f"✅ Połączono z arkuszem: {sh.title}")
+        return worksheet
     except Exception as e:
-        st.error(f"Błąd połączenia z Google Sheets: {e}")
+        st.error(f"❌ Błąd połączenia z Google Sheets: {type(e).__name__}: {str(e)}")
+        import traceback
+        st.error(f"Szczegóły: {traceback.format_exc()}")
         return None
 
 
@@ -43,39 +57,52 @@ def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id=
     Save coding results to Google Sheets.
     Appends a new row with all coding information.
     """
-    ws = get_worksheet()
-    if ws is None:
-        st.error("Nie można zapisać do Google Sheets - brak połączenia")
-        return False
-    
     try:
-        timestamp = datetime.utcnow().isoformat()
+        ws = get_worksheet()
+        if ws is None:
+            st.error("❌ Nie można zapisać - brak połączenia z arkuszem")
+            return False
+        
+        # Use timezone-aware datetime
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         # Prepare row data: [timestamp, coder_id, oid, text, sentiment values, emotion values]
         row = [
             timestamp,
-            coder_id,
-            oid,
-            text,
+            str(coder_id),
+            str(oid),
+            str(text)[:500],  # Limit text length to 500 chars
             # Sentiment values
-            sentiment_values.get("positive", 0),
-            sentiment_values.get("negative", 0),
-            sentiment_values.get("neutral", 0),
+            int(sentiment_values.get("positive", 0)),
+            int(sentiment_values.get("negative", 0)),
+            int(sentiment_values.get("neutral", 0)),
             # Emotion values
-            emotion_values.get("joy", 0),
-            emotion_values.get("trust", 0),
-            emotion_values.get("anticipation", 0),
-            emotion_values.get("surprise", 0),
-            emotion_values.get("fear", 0),
-            emotion_values.get("sadness", 0),
-            emotion_values.get("disgust", 0),
-            emotion_values.get("anger", 0)
+            int(emotion_values.get("joy", 0)),
+            int(emotion_values.get("trust", 0)),
+            int(emotion_values.get("anticipation", 0)),
+            int(emotion_values.get("surprise", 0)),
+            int(emotion_values.get("fear", 0)),
+            int(emotion_values.get("sadness", 0)),
+            int(emotion_values.get("disgust", 0)),
+            int(emotion_values.get("anger", 0))
         ]
         
-        ws.append_row(row)
+        # Debug: Show what we're trying to save
+        with st.expander("🔍 Debug - dane do zapisania", expanded=False):
+            st.write("Przygotowany wiersz:", row)
+            st.write("Liczba kolumn:", len(row))
+        
+        # Append row to sheet
+        ws.append_row(row, value_input_option='USER_ENTERED')
+        
+        st.success(f"✅ Zapisano wiersz do arkusza (timestamp: {timestamp})")
         return True
+        
     except Exception as e:
-        st.error(f"Błąd podczas zapisu do Google Sheets: {e}")
+        st.error(f"❌ Błąd zapisu do Google Sheets: {type(e).__name__}")
+        st.error(f"Szczegóły: {str(e)}")
+        import traceback
+        st.error(f"Stack trace: {traceback.format_exc()}")
         return False
 
 
@@ -163,6 +190,24 @@ def start_screen():
        - **Średnie** (1)
        - **Wysokie** (2)
     """)
+    
+    st.markdown("---")
+    
+    # Test connection button
+    st.markdown("### 🔌 Test połączenia z Google Sheets")
+    col_test1, col_test2, col_test3 = st.columns([1, 1, 1])
+    with col_test2:
+        if st.button("🧪 Testuj połączenie", use_container_width=True):
+            with st.spinner("Sprawdzam połączenie..."):
+                ws = get_worksheet()
+                if ws:
+                    try:
+                        row_count = ws.row_count
+                        col_count = ws.col_count
+                        st.success(f"✅ Połączono! Arkusz ma {row_count} wierszy i {col_count} kolumn")
+                        st.info(f"📊 Nazwa arkusza: {ws.title}")
+                    except Exception as e:
+                        st.error(f"❌ Błąd odczytu arkusza: {e}")
     
     st.markdown("---")
     
