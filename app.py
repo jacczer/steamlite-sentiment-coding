@@ -31,16 +31,31 @@ def get_worksheet():
             st.error("❌ Brak 'SPREADSHEET_ID' w secrets!")
             return None
         
-        # Try to load credentials from JSON string or dict
-        if "service_account_json" in st.secrets:
-            # Method 1: Full JSON as string
+        # Build credentials dict from individual TOML fields
+        if "type" in st.secrets and "project_id" in st.secrets:
+            # Method 1: Individual fields as TOML (preferred for Streamlit Cloud)
+            creds_info = {
+                "type": st.secrets["type"],
+                "project_id": st.secrets["project_id"],
+                "private_key_id": st.secrets["private_key_id"],
+                "private_key": st.secrets["private_key"],
+                "client_email": st.secrets["client_email"],
+                "client_id": st.secrets["client_id"],
+                "auth_uri": st.secrets["auth_uri"],
+                "token_uri": st.secrets["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["client_x509_cert_url"],
+                "universe_domain": st.secrets.get("universe_domain", "googleapis.com")
+            }
+        elif "service_account_json" in st.secrets:
+            # Method 2: Full JSON as string (for local development)
             import json
             creds_info = json.loads(st.secrets["service_account_json"])
         elif "gsheets" in st.secrets:
-            # Method 2: Dict with fields (for compatibility)
+            # Method 3: Dict with fields (for compatibility)
             creds_info = dict(st.secrets["gsheets"])
         else:
-            st.error("❌ Brak konfiguracji credentials w secrets! Dodaj 'service_account_json' lub 'gsheets'")
+            st.error("❌ Brak konfiguracji credentials w secrets! Dodaj pola 'type', 'project_id', etc. lub 'service_account_json'")
             return None
         
         creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
