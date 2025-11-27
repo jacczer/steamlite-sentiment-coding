@@ -8,7 +8,7 @@ Aplikacja Streamlit do manualnego kodowania sentymentu i emocji w tekstach z fak
 
 ```
 sent_emo_app/
-├── sent_emo_app.py        # Główna aplikacja Streamlit
+├── streamlit_app.py       # Główna aplikacja Streamlit
 ├── data_to_code.json      # Dane wejściowe (tylko $oid i text)
 ├── results/               # Folder z wynikami kodowania
 ├── requirements.txt       # Zależności Python
@@ -25,7 +25,7 @@ sent_emo_app/
 
 2. **Uruchomienie aplikacji**:
    ```bash
-   streamlit run sent_emo_app.py
+   streamlit run streamlit_app.py
    ```
 
 ## Funkcjonalność
