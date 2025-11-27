@@ -31,9 +31,16 @@ def get_worksheet():
             st.error("❌ Brak 'SPREADSHEET_ID' w secrets!")
             return None
         
-        # Build credentials dict from individual TOML fields
-        if "type" in st.secrets and "project_id" in st.secrets:
-            # Method 1: Individual fields as TOML (preferred for Streamlit Cloud)
+        # Build credentials dict - try different formats
+        creds_info = None
+        
+        # Method 1: Full JSON as string (for local development)
+        if "service_account_json" in st.secrets:
+            import json
+            creds_info = json.loads(st.secrets["service_account_json"])
+        
+        # Method 2: Individual fields as TOML (for Streamlit Cloud)
+        elif "type" in st.secrets and "project_id" in st.secrets:
             creds_info = {
                 "type": st.secrets["type"],
                 "project_id": st.secrets["project_id"],
@@ -47,15 +54,13 @@ def get_worksheet():
                 "client_x509_cert_url": st.secrets["client_x509_cert_url"],
                 "universe_domain": st.secrets.get("universe_domain", "googleapis.com")
             }
-        elif "service_account_json" in st.secrets:
-            # Method 2: Full JSON as string (for local development)
-            import json
-            creds_info = json.loads(st.secrets["service_account_json"])
+        
+        # Method 3: Dict with fields (backward compatibility)
         elif "gsheets" in st.secrets:
-            # Method 3: Dict with fields (for compatibility)
             creds_info = dict(st.secrets["gsheets"])
-        else:
-            st.error("❌ Brak konfiguracji credentials w secrets! Dodaj pola 'type', 'project_id', etc. lub 'service_account_json'")
+        
+        if not creds_info:
+            st.error("❌ Brak konfiguracji credentials w secrets! Dodaj 'service_account_json' (JSON string) lub osobne pola TOML (type, project_id, private_key, etc.)")
             return None
         
         creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
