@@ -143,7 +143,7 @@ CUSTOM_CSS = """
         flex-shrink: 0;
     }
     
-    /* Centered slider labels */
+    /* Centered slider labels - nazwa sentymentu/emocji */
     .stSlider label, [data-testid="stWidgetLabel"] {
         text-align: center !important;
         width: 100% !important;
@@ -158,12 +158,12 @@ CUSTOM_CSS = """
         background: #667eea !important;
     }
     
-    /* Select slider - etykiety pod suwakiem */
-    [data-baseweb="slider"] {
-        margin-bottom: 0 !important;
+    /* Hide current value label above slider (Brak/Niskie text shown above) */
+    .stSlider [data-testid="stThumbValue"] {
+        display: none !important;
     }
     
-    /* Style for slider tick labels */
+    /* Style for slider tick labels at bottom */
     .stSlider [data-testid="stTickBar"] {
         font-size: 0.8rem !important;
         color: #a0a0a0 !important;
