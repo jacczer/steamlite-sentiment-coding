@@ -7,11 +7,77 @@ import streamlit as st
 import json
 from pathlib import Path
 from datetime import datetime
+import gspread
+from google.oauth2.service_account import Credentials
 
 # Configuration
 DATA_FILE = Path(__file__).parent / "data_to_code.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
+
+# Google Sheets configuration
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+
+@st.cache_resource
+def get_worksheet():
+    """
+    Establish connection to Google Sheets using service account credentials.
+    Returns the first worksheet of the spreadsheet.
+    """
+    try:
+        creds_info = st.secrets["gsheets"]
+        creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+        client = gspread.authorize(creds)
+        
+        SPREADSHEET_ID = st.secrets["SPREADSHEET_ID"]
+        sh = client.open_by_key(SPREADSHEET_ID)
+        return sh.sheet1  # pierwszy arkusz (first worksheet)
+    except Exception as e:
+        st.error(f"Błąd połączenia z Google Sheets: {e}")
+        return None
+
+
+def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id="unknown"):
+    """
+    Save coding results to Google Sheets.
+    Appends a new row with all coding information.
+    """
+    ws = get_worksheet()
+    if ws is None:
+        st.error("Nie można zapisać do Google Sheets - brak połączenia")
+        return False
+    
+    try:
+        timestamp = datetime.utcnow().isoformat()
+        
+        # Prepare row data: [timestamp, coder_id, oid, text, sentiment values, emotion values]
+        row = [
+            timestamp,
+            coder_id,
+            oid,
+            text,
+            # Sentiment values
+            sentiment_values.get("positive", 0),
+            sentiment_values.get("negative", 0),
+            sentiment_values.get("neutral", 0),
+            # Emotion values
+            emotion_values.get("joy", 0),
+            emotion_values.get("trust", 0),
+            emotion_values.get("anticipation", 0),
+            emotion_values.get("surprise", 0),
+            emotion_values.get("fear", 0),
+            emotion_values.get("sadness", 0),
+            emotion_values.get("disgust", 0),
+            emotion_values.get("anger", 0)
+        ]
+        
+        ws.append_row(row)
+        return True
+    except Exception as e:
+        st.error(f"Błąd podczas zapisu do Google Sheets: {e}")
+        return False
+
 
 # Sentiment and emotion categories
 SENTIMENTS = ["positive", "negative", "neutral"]
@@ -75,6 +141,9 @@ def initialize_session():
             'sentiment': {},
             'emotion': {}
         }
+    
+    if 'coder_id' not in st.session_state:
+        st.session_state.coder_id = ""
 
 
 def start_screen():
@@ -93,15 +162,31 @@ def start_screen():
        - **Brak/Niskie** (0)
        - **Średnie** (1)
        - **Wysokie** (2)
-    
-    **Kliknij przycisk START, aby rozpocząć kodowanie.**
     """)
+    
+    st.markdown("---")
+    
+    # Coder ID input
+    st.markdown("### 👤 Identyfikacja kodera")
+    coder_id = st.text_input(
+        "Podaj swój identyfikator (np. inicjały):",
+        placeholder="np. JK, AM, PW",
+        max_chars=20,
+        help="Ten identyfikator będzie zapisany wraz z Twoimi kodowaniami"
+    )
+    
+    st.markdown("---")
+    st.markdown("**Kliknij przycisk START, aby rozpocząć kodowanie.**")
     
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         if st.button("🚀 START", use_container_width=True, type="primary"):
-            st.session_state.screen = 'coding'
-            st.rerun()
+            if not coder_id.strip():
+                st.warning("⚠️ Proszę podać identyfikator przed rozpoczęciem!")
+            else:
+                st.session_state.coder_id = coder_id.strip()
+                st.session_state.screen = 'coding'
+                st.rerun()
 
 
 def coding_screen():
@@ -217,6 +302,20 @@ def emotion_coding_ui():
         if st.button("✅ Zapisz i kontynuuj", use_container_width=True, type="primary"):
             # Save current coding
             current_element = st.session_state.session_elements[st.session_state.current_index]
+            
+            # Save to Google Sheets immediately
+            success = save_to_google_sheets(
+                oid=current_element["$oid"],
+                text=current_element["text"],
+                sentiment_values=st.session_state.current_coding['sentiment'],
+                emotion_values=emotion_values,
+                coder_id=st.session_state.coder_id
+            )
+            
+            if success:
+                st.success("✅ Zapisano do Google Sheets!", icon="✅")
+            
+            # Also save to local results for backup (optional)
             result = {
                 "$oid": current_element["$oid"],
                 "text": current_element["text"],
@@ -232,14 +331,17 @@ def emotion_coding_ui():
             
             # Check if session is complete
             if st.session_state.current_index >= 20:
-                save_results()
+                save_results()  # Local backup
                 st.session_state.screen = 'end'
             
             st.rerun()
 
 
 def save_results():
-    """Save coding results to JSON file."""
+    """
+    Save coding results to JSON file (LOCAL BACKUP ONLY).
+    Primary data storage is Google Sheets.
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = RESULTS_DIR / f"manual_coding_{timestamp}.json"
     
