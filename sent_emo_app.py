@@ -1,7 +1,7 @@
 """
 Aplikacja Streamlit do manualnego kodowania sentymentu i emocji.
-#cd app\wer_llm\sent_emo_app
-streamlit run app.py
+#cd app/wer_llm/sent_emo_app
+streamlit run sent_emo_app.py
 """
 import streamlit as st
 import json
@@ -222,23 +222,31 @@ CUSTOM_CSS = """
 """
 
 
-@st.cache_resource(ttl=60)
-def get_worksheet(_force_refresh=None):
-    """Establish connection to Google Sheets."""
+def fix_private_key(key):
+    """Fix escaped newlines in private key (convert literal \\n to actual newline)."""
+    # Replace literal backslash+n with actual newline character
+    return key.replace(chr(92) + 'n', chr(10))
+
+
+def get_google_sheets_client():
+    """Create Google Sheets client (no caching to avoid stale connections)."""
     try:
         if "SPREADSHEET_ID" not in st.secrets:
-            return None
+            return None, "Brak SPREADSHEET_ID w secrets!"
         
         creds_info = None
         
         if "service_account_json" in st.secrets:
             creds_info = json.loads(st.secrets["service_account_json"])
+            # Fix escaped newlines in private_key
+            if "private_key" in creds_info:
+                creds_info["private_key"] = fix_private_key(creds_info["private_key"])
         elif "type" in st.secrets and "project_id" in st.secrets:
             creds_info = {
                 "type": st.secrets["type"],
                 "project_id": st.secrets["project_id"],
                 "private_key_id": st.secrets["private_key_id"],
-                "private_key": st.secrets["private_key"],
+                "private_key": fix_private_key(st.secrets["private_key"]),
                 "client_email": st.secrets["client_email"],
                 "client_id": st.secrets["client_id"],
                 "auth_uri": st.secrets["auth_uri"],
@@ -249,25 +257,27 @@ def get_worksheet(_force_refresh=None):
             }
         elif "gsheets" in st.secrets:
             creds_info = dict(st.secrets["gsheets"])
+            if "private_key" in creds_info:
+                creds_info["private_key"] = fix_private_key(creds_info["private_key"])
         
         if not creds_info:
-            return None
+            return None, "Nie można odczytać danych uwierzytelniających!"
         
         creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         client = gspread.authorize(creds)
         sh = client.open_by_key(st.secrets["SPREADSHEET_ID"])
-        return sh.sheet1
-    except Exception:
-        return None
+        return sh.sheet1, None
+    except Exception as e:
+        return None, str(e)
 
 
 def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id="unknown"):
     """Save coding results to Google Sheets."""
+    ws, error = get_google_sheets_client()
+    if ws is None:
+        return False, f"Błąd połączenia: {error}"
+    
     try:
-        ws = get_worksheet()
-        if ws is None:
-            return False
-        
         timestamp = datetime.now(timezone.utc).isoformat()
         row = [
             timestamp, str(coder_id), str(oid), str(text)[:500],
@@ -284,9 +294,9 @@ def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id=
             int(emotion_values.get("anger", 0))
         ]
         ws.append_row(row, value_input_option='USER_ENTERED')
-        return True
-    except Exception:
-        return False
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 
 # Categories configuration
@@ -516,13 +526,17 @@ def emotion_coding_ui(text):
             current_element = st.session_state.session_elements[st.session_state.current_index]
             
             # Save to Google Sheets
-            save_to_google_sheets(
+            success, error = save_to_google_sheets(
                 oid=current_element["$oid"],
                 text=current_element["text"],
                 sentiment_values=st.session_state.current_coding['sentiment'],
                 emotion_values=emotion_values,
                 coder_id=st.session_state.coder_id
             )
+            
+            if not success:
+                st.error(f"❌ Błąd zapisu: {error}")
+                st.stop()
             
             # Local backup
             result = {
