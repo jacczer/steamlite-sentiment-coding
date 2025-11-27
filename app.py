@@ -12,9 +12,27 @@ from google.oauth2.service_account import Credentials
 
 # Configuration
 DATA_FILE = Path(__file__).parent / "data_to_code.json"
-DEFINITIONS_FILE = Path(__file__).parent / "sent_emo_definicje.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
+
+# Definitions for tooltips
+DEFINITIONS = {
+    "sentiments": {
+        "positive": "Ogólny wydźwięk afirmatywny, aprobatywny, pochwalny wobec opisywanego obiektu, osoby, grupy lub sytuacji.",
+        "negative": "Ogólny wydźwięk krytyczny, potępiający, pejoratywny, deprecjonujący.",
+        "neutral": "Styl informacyjny, opisowy, pozbawiony wyraźnych markerów oceny; skupienie na faktach bez emocjonalnego komentarza."
+    },
+    "emotions": {
+        "joy": "Reakcja na zysk lub osiągnięcie celu. Obejmuje spektrum od pogody ducha po ekstazę.",
+        "trust": "Reakcja na sprzymierzeńca lub członka grupy. Obejmuje spektrum od akceptacji po podziw.",
+        "anticipation": "Reakcja na nowe terytorium lub przyszłe zdarzenie. Obejmuje spektrum od czujności po ekscytację.",
+        "surprise": "Reakcja na nagły, nieoczekiwany bodziec. Obejmuje spektrum od zdziwienia po osłupienie.",
+        "fear": "Reakcja na zagrożenie. Obejmuje spektrum od niepokoju po przerażenie.",
+        "sadness": "Reakcja na utratę ważnego zasobu lub osoby. Obejmuje spektrum od przygnębienia po żałobę.",
+        "disgust": "Reakcja na obiekt toksyczny lub szkodliwy (także moralnie). Obejmuje spektrum od niechęci po odrazę.",
+        "anger": "Reakcja na przeszkodę w osiągnięciu celu. Obejmuje spektrum od irytacji po wściekłość."
+    }
+}
 
 # Google Sheets configuration
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -296,23 +314,12 @@ def load_data():
         return json.load(f)
 
 
-def load_definitions():
-    """Load sentiment and emotion definitions from JSON file."""
-    try:
-        with open(DEFINITIONS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return {"sentiments": {}, "emotions": {}}
-
-
 def initialize_session():
     """Initialize session state variables."""
     if 'screen' not in st.session_state:
         st.session_state.screen = 'start'
     if 'data' not in st.session_state:
         st.session_state.data = load_data()
-    if 'definitions' not in st.session_state:
-        st.session_state.definitions = load_definitions()
     if 'current_index' not in st.session_state:
         st.session_state.current_index = 0
     if 'session_elements' not in st.session_state:
@@ -419,13 +426,10 @@ def sentiment_coding_ui(text):
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
-    # Get definitions
-    definitions = st.session_state.definitions.get("sentiments", {})
-    
     # Create pills for each sentiment
     for key, data in SENTIMENTS.items():
         # Get definition for tooltip
-        definition = definitions.get(key, {}).get("description", "")
+        definition = DEFINITIONS["sentiments"].get(key, "")
         
         # Label with help icon
         value = st.pills(
@@ -468,9 +472,6 @@ def emotion_coding_ui(text):
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
-    # Get definitions
-    definitions = st.session_state.definitions.get("emotions", {})
-    
     # Create two columns for emotions
     col1, col2 = st.columns(2)
     
@@ -478,7 +479,7 @@ def emotion_coding_ui(text):
     
     with col1:
         for key, data in emotions_list[:4]:
-            definition = definitions.get(key, {}).get("description", "")
+            definition = DEFINITIONS["emotions"].get(key, "")
             value = st.pills(
                 f"{data['icon']} {data['pl']}",
                 options=scale_options,
@@ -490,7 +491,7 @@ def emotion_coding_ui(text):
     
     with col2:
         for key, data in emotions_list[4:]:
-            definition = definitions.get(key, {}).get("description", "")
+            definition = DEFINITIONS["emotions"].get(key, "")
             value = st.pills(
                 f"{data['icon']} {data['pl']}",
                 options=scale_options,
