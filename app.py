@@ -153,16 +153,14 @@ CUSTOM_CSS = """
         margin-bottom: 5px !important;
     }
     
-    /* Hide slider value labels (Brak/Niskie, Średnie, Wysokie) */
-    .stSlider [data-testid="stTickBarMin"],
-    .stSlider [data-testid="stTickBarMax"],
-    [data-baseweb="slider"] > div > div:last-child {
-        display: none !important;
-    }
-    
     /* Slider styling - jednolity kolor */
     .stSlider > div > div > div {
         background: #667eea !important;
+    }
+    
+    /* Show tooltip on hover with scale labels */
+    [data-baseweb="slider"] [role="slider"] {
+        cursor: pointer;
     }
     
     /* Success message styling */
@@ -400,12 +398,13 @@ def sentiment_coding_ui(text):
     
     # Create sliders for each sentiment with centered label
     for key, data in SENTIMENTS.items():
-        value = st.select_slider(
+        value = st.slider(
             data['pl'],
-            options=[0, 1, 2],
-            format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
+            min_value=0,
+            max_value=2,
             value=0,
-            key=f"sentiment_{key}"
+            key=f"sentiment_{key}",
+            help="0 = Brak/Niskie | 1 = Średnie | 2 = Wysokie"
         )
         sentiment_values[key] = value
     
@@ -443,23 +442,25 @@ def emotion_coding_ui(text):
     
     with col1:
         for key, data in emotions_list[:4]:
-            value = st.select_slider(
+            value = st.slider(
                 f"{data['icon']} {data['pl']}",
-                options=[0, 1, 2],
-                format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
+                min_value=0,
+                max_value=2,
                 value=0,
-                key=f"emotion_{key}"
+                key=f"emotion_{key}",
+                help="0 = Brak/Niskie | 1 = Średnie | 2 = Wysokie"
             )
             emotion_values[key] = value
     
     with col2:
         for key, data in emotions_list[4:]:
-            value = st.select_slider(
+            value = st.slider(
                 f"{data['icon']} {data['pl']}",
-                options=[0, 1, 2],
-                format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
+                min_value=0,
+                max_value=2,
                 value=0,
-                key=f"emotion_{key}"
+                key=f"emotion_{key}",
+                help="0 = Brak/Niskie | 1 = Średnie | 2 = Wysokie"
             )
             emotion_values[key] = value
     
