@@ -79,6 +79,7 @@ CUSTOM_CSS = """
         padding: 20px 25px;
         border-left: 4px solid #667eea;
         margin: 0;
+        border-radius: 0 0 15px 15px;
     }
     
     .text-card-integrated p {
@@ -88,34 +89,9 @@ CUSTOM_CSS = """
         margin: 0;
     }
     
-    /* Scale legend */
-    .scale-legend {
-        display: flex;
-        justify-content: space-between;
-        background: rgba(102, 126, 234, 0.1);
-        padding: 10px 20px;
-        margin: 0;
-        border-radius: 0 0 15px 15px;
-    }
-    
-    .scale-item {
-        text-align: center;
-        flex: 1;
-    }
-    
-    .scale-label {
-        font-size: 0.85rem;
-        color: #a0a0a0;
-        font-weight: 500;
-    }
-    
-    /* Emotion/Sentiment labels */
-    .coding-label {
-        font-size: 1rem;
-        font-weight: 500;
-        color: #ffffff;
-        padding: 8px 0 5px 5px;
-        margin-top: 10px;
+    /* Slider container spacing */
+    .stSlider {
+        margin-bottom: 15px;
     }
     
     /* Progress styling */
@@ -168,9 +144,14 @@ CUSTOM_CSS = """
         flex-shrink: 0;
     }
     
-    /* Hide slider labels */
-    .stSlider label {
-        display: none !important;
+    /* Centered slider labels */
+    .stSlider label, [data-testid="stWidgetLabel"] {
+        text-align: center !important;
+        width: 100% !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+        font-size: 1rem !important;
+        margin-bottom: 5px !important;
     }
     
     /* Slider styling - jednolity kolor */
@@ -397,7 +378,7 @@ def coding_screen():
 
 def sentiment_coding_ui(text):
     """UI for sentiment coding."""
-    # Integrated container with header, text and scale
+    # Header and text container
     st.markdown(f"""
     <div class="coding-container">
         <div class="section-header">
@@ -406,32 +387,19 @@ def sentiment_coding_ui(text):
         <div class="text-card-integrated">
             <p>{text}</p>
         </div>
-        <div class="scale-legend">
-            <div class="scale-item">
-                <span class="scale-label">Brak / Niskie</span>
-            </div>
-            <div class="scale-item">
-                <span class="scale-label">Średnie</span>
-            </div>
-            <div class="scale-item">
-                <span class="scale-label">Wysokie</span>
-            </div>
-        </div>
     </div>
     """, unsafe_allow_html=True)
     
     sentiment_values = {}
     
-    # Create sliders for each sentiment
+    # Create sliders for each sentiment with centered label
     for key, data in SENTIMENTS.items():
-        st.markdown(f"<div class='coding-label'>{data['pl']}</div>", unsafe_allow_html=True)
         value = st.select_slider(
-            f"sent_{key}",
+            data['pl'],
             options=[0, 1, 2],
             format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
             value=0,
-            key=f"sentiment_{key}",
-            label_visibility="collapsed"
+            key=f"sentiment_{key}"
         )
         sentiment_values[key] = value
     
@@ -448,7 +416,7 @@ def sentiment_coding_ui(text):
 
 def emotion_coding_ui(text):
     """UI for emotion coding."""
-    # Integrated container with header, text and scale
+    # Header and text container
     st.markdown(f"""
     <div class="coding-container">
         <div class="section-header">
@@ -456,17 +424,6 @@ def emotion_coding_ui(text):
         </div>
         <div class="text-card-integrated">
             <p>{text}</p>
-        </div>
-        <div class="scale-legend">
-            <div class="scale-item">
-                <span class="scale-label">Brak / Niskie</span>
-            </div>
-            <div class="scale-item">
-                <span class="scale-label">Średnie</span>
-            </div>
-            <div class="scale-item">
-                <span class="scale-label">Wysokie</span>
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -480,27 +437,23 @@ def emotion_coding_ui(text):
     
     with col1:
         for key, data in emotions_list[:4]:
-            st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
             value = st.select_slider(
-                f"emo_{key}",
+                f"{data['icon']} {data['pl']}",
                 options=[0, 1, 2],
                 format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
                 value=0,
-                key=f"emotion_{key}",
-                label_visibility="collapsed"
+                key=f"emotion_{key}"
             )
             emotion_values[key] = value
     
     with col2:
         for key, data in emotions_list[4:]:
-            st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
             value = st.select_slider(
-                f"emo_{key}",
+                f"{data['icon']} {data['pl']}",
                 options=[0, 1, 2],
                 format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
                 value=0,
-                key=f"emotion_{key}",
-                label_visibility="collapsed"
+                key=f"emotion_{key}"
             )
             emotion_values[key] = value
     
