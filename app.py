@@ -405,18 +405,18 @@ def coding_screen():
     with col2:
         st.markdown(f"<p style='text-align: right; font-size: 1.1rem; font-weight: 600; color: #667eea;'>{progress} / 20</p>", unsafe_allow_html=True)
     
-    # Text card
+    # Coding stage FIRST (before text)
+    if st.session_state.coding_stage == 'sentiment':
+        sentiment_coding_ui()
+    else:
+        emotion_coding_ui()
+    
+    # Text card AFTER coding section
     st.markdown(f"""
     <div class="text-card">
         <p>{current_element['text']}</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Coding stage
-    if st.session_state.coding_stage == 'sentiment':
-        sentiment_coding_ui()
-    else:
-        emotion_coding_ui()
 
 
 def sentiment_coding_ui():
@@ -436,14 +436,16 @@ def sentiment_coding_ui():
     # Create sliders for each sentiment
     for key, data in SENTIMENTS.items():
         st.markdown(f"<div class='coding-label'>{data['pl']}</div>", unsafe_allow_html=True)
-        value = st.select_slider(
+        value = st.slider(
             f"sent_{key}",
-            options=["Brak/Niskie", "Średnie", "Wysokie"],
-            value="Brak/Niskie",
+            min_value=0,
+            max_value=2,
+            value=0,
             key=f"sentiment_{key}",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            format=""
         )
-        sentiment_values[key] = {"Brak/Niskie": 0, "Średnie": 1, "Wysokie": 2}[value]
+        sentiment_values[key] = value
     
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -478,26 +480,30 @@ def emotion_coding_ui():
     with col1:
         for key, data in emotions_list[:4]:
             st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
-            value = st.select_slider(
+            value = st.slider(
                 f"emo_{key}",
-                options=["Brak/Niskie", "Średnie", "Wysokie"],
-                value="Brak/Niskie",
+                min_value=0,
+                max_value=2,
+                value=0,
                 key=f"emotion_{key}",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                format=""
             )
-            emotion_values[key] = {"Brak/Niskie": 0, "Średnie": 1, "Wysokie": 2}[value]
+            emotion_values[key] = value
     
     with col2:
         for key, data in emotions_list[4:]:
             st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
-            value = st.select_slider(
+            value = st.slider(
                 f"emo_{key}",
-                options=["Brak/Niskie", "Średnie", "Wysokie"],
-                value="Brak/Niskie",
+                min_value=0,
+                max_value=2,
+                value=0,
                 key=f"emotion_{key}",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                format=""
             )
-            emotion_values[key] = {"Brak/Niskie": 0, "Średnie": 1, "Wysokie": 2}[value]
+            emotion_values[key] = value
     
     st.markdown("<br>", unsafe_allow_html=True)
     
