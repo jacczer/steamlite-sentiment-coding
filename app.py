@@ -1,0 +1,300 @@
+"""
+Aplikacja Streamlit do manualnego kodowania sentymentu i emocji.
+#cd app\wer_llm\sent_emo_app
+streamlit run app.py
+"""
+import streamlit as st
+import json
+from pathlib import Path
+from datetime import datetime
+
+# Configuration
+DATA_FILE = Path(__file__).parent / "data_to_code.json"
+RESULTS_DIR = Path(__file__).parent / "results"
+RESULTS_DIR.mkdir(exist_ok=True)
+
+# Sentiment and emotion categories
+SENTIMENTS = ["positive", "negative", "neutral"]
+EMOTIONS = ["joy", "trust", "anticipation", "surprise", "fear", "sadness", "disgust", "anger"]
+
+# Polish labels for sentiment and emotions
+SENTIMENT_LABELS_PL = {
+    "positive": "Pozytywny",
+    "negative": "Negatywny", 
+    "neutral": "Neutralny"
+}
+
+EMOTION_LABELS_PL = {
+    "joy": "Radość",
+    "trust": "Zaufanie",
+    "anticipation": "Oczekiwanie",
+    "surprise": "Zaskoczenie",
+    "fear": "Strach",
+    "sadness": "Smutek",
+    "disgust": "Wstręt",
+    "anger": "Złość"
+}
+
+# Scale labels
+SCALE_LABELS = {
+    0: "Brak/Niskie",
+    1: "Średnie",
+    2: "Wysokie"
+}
+
+
+def load_data():
+    """Load data to code from JSON file."""
+    with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def initialize_session():
+    """Initialize session state variables."""
+    if 'screen' not in st.session_state:
+        st.session_state.screen = 'start'
+    
+    if 'data' not in st.session_state:
+        st.session_state.data = load_data()
+    
+    if 'current_index' not in st.session_state:
+        st.session_state.current_index = 0
+    
+    if 'session_elements' not in st.session_state:
+        # Select 20 elements for this session
+        st.session_state.session_elements = st.session_state.data[:20]
+    
+    if 'coding_stage' not in st.session_state:
+        st.session_state.coding_stage = 'sentiment'  # 'sentiment' or 'emotion'
+    
+    if 'results' not in st.session_state:
+        st.session_state.results = []
+    
+    if 'current_coding' not in st.session_state:
+        st.session_state.current_coding = {
+            'sentiment': {},
+            'emotion': {}
+        }
+
+
+def start_screen():
+    """Display start screen."""
+    st.title("🎯 Aplikacja do kodowania sentymentu i emocji")
+    
+    st.markdown("""
+    ### Witamy w aplikacji do manualnego kodowania!
+    
+    **Instrukcja:**
+    1. W tej sesji zakodujemy **20 elementów tekstowych**
+    2. Dla każdego tekstu zakodujemy:
+       - **Sentyment** (3 kategorie: pozytywny, negatywny, neutralny)
+       - **Emocje** (8 kategorii: radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość)
+    3. Dla każdej kategorii określ natężenie na skali:
+       - **Brak/Niskie** (0)
+       - **Średnie** (1)
+       - **Wysokie** (2)
+    
+    **Kliknij przycisk START, aby rozpocząć kodowanie.**
+    """)
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("🚀 START", use_container_width=True, type="primary"):
+            st.session_state.screen = 'coding'
+            st.rerun()
+
+
+def coding_screen():
+    """Display coding screen."""
+    current_element = st.session_state.session_elements[st.session_state.current_index]
+    progress = st.session_state.current_index + 1
+    
+    # Progress indicator
+    st.progress(progress / 20)
+    st.caption(f"Element {progress} / 20")
+    
+    # Display text
+    st.markdown("### 📄 Tekst do zakodowania:")
+    st.markdown(f"<div style='background-color: #0e1117; padding: 20px; border-radius: 5px; border-left: 5px solid #1f77b4;'><p style='color: white; font-size: 16px; line-height: 1.6;'>{current_element['text']}</p></div>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Coding stage: Sentiment or Emotion
+    if st.session_state.coding_stage == 'sentiment':
+        sentiment_coding_ui()
+    else:
+        emotion_coding_ui()
+
+
+def sentiment_coding_ui():
+    """UI for sentiment coding."""
+    st.markdown("### 😊😐😢 Kodowanie sentymentu")
+    st.markdown("**Określ natężenie każdego typu sentymentu:**")
+    
+    # Scale description at the top
+    st.markdown("""
+    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px;'>
+        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
+        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
+        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    sentiment_values = {}
+    
+    for sentiment in SENTIMENTS:
+        st.markdown(f"**{SENTIMENT_LABELS_PL[sentiment]}:**")
+        value = st.slider(
+            f"slider_{sentiment}",
+            min_value=0,
+            max_value=2,
+            value=0,
+            step=1,
+            key=f"sentiment_{sentiment}",
+            label_visibility="collapsed"
+        )
+        sentiment_values[sentiment] = value
+    
+    # Scale description at the bottom
+    st.markdown("""
+    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-top: 5px;'>
+        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
+        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
+        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("➡️ Dalej do emocji", use_container_width=True, type="primary"):
+            st.session_state.current_coding['sentiment'] = sentiment_values
+            st.session_state.coding_stage = 'emotion'
+            st.rerun()
+
+
+def emotion_coding_ui():
+    """UI for emotion coding."""
+    st.markdown("### 🎭 Kodowanie emocji")
+    st.markdown("**Określ natężenie każdej emocji:**")
+    
+    # Scale description at the top
+    st.markdown("""
+    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px;'>
+        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
+        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
+        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    emotion_values = {}
+    
+    for emotion in EMOTIONS:
+        st.markdown(f"**{EMOTION_LABELS_PL[emotion]}:**")
+        value = st.slider(
+            f"slider_{emotion}",
+            min_value=0,
+            max_value=2,
+            value=0,
+            step=1,
+            key=f"emotion_{emotion}",
+            label_visibility="collapsed"
+        )
+        emotion_values[emotion] = value
+    
+    # Scale description at the bottom
+    st.markdown("""
+    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-top: 5px;'>
+        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
+        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
+        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("✅ Zapisz i kontynuuj", use_container_width=True, type="primary"):
+            # Save current coding
+            current_element = st.session_state.session_elements[st.session_state.current_index]
+            result = {
+                "$oid": current_element["$oid"],
+                "text": current_element["text"],
+                "manual_sentiment": st.session_state.current_coding['sentiment'],
+                "manual_emotion": emotion_values
+            }
+            st.session_state.results.append(result)
+            
+            # Reset for next element
+            st.session_state.current_coding = {'sentiment': {}, 'emotion': {}}
+            st.session_state.coding_stage = 'sentiment'
+            st.session_state.current_index += 1
+            
+            # Check if session is complete
+            if st.session_state.current_index >= 20:
+                save_results()
+                st.session_state.screen = 'end'
+            
+            st.rerun()
+
+
+def save_results():
+    """Save coding results to JSON file."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = RESULTS_DIR / f"manual_coding_{timestamp}.json"
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(st.session_state.results, f, ensure_ascii=False, indent=2)
+    
+    st.session_state.results_file = output_file
+
+
+def end_screen():
+    """Display end screen."""
+    st.title("🎉 Gratulacje!")
+    
+    st.markdown("""
+    ### Zakończyłeś kodowanie!
+    
+    Pomyślnie zakodowano **20 elementów**.
+    """)
+    
+    st.success(f"✅ Wyniki zapisano w pliku: `{st.session_state.results_file.name}`")
+    
+    st.markdown("---")
+    
+    # Display summary
+    st.markdown("### 📊 Podsumowanie sesji:")
+    st.metric("Zakodowane elementy", "20")
+    
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("🔄 Nowa sesja", use_container_width=True, type="primary"):
+            # Reset session
+            st.session_state.clear()
+            st.rerun()
+
+
+def main():
+    """Main application logic."""
+    st.set_page_config(
+        page_title="Kodowanie sentymentu i emocji",
+        page_icon="🎯",
+        layout="wide"
+    )
+    
+    initialize_session()
+    
+    # Route to appropriate screen
+    if st.session_state.screen == 'start':
+        start_screen()
+    elif st.session_state.screen == 'coding':
+        coding_screen()
+    elif st.session_state.screen == 'end':
+        end_screen()
+
+
+if __name__ == "__main__":
+    main()
