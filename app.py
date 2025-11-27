@@ -339,32 +339,18 @@ def start_screen():
     </div>
     """, unsafe_allow_html=True)
     
-    # Instructions
+    # Instructions using native Streamlit
+    st.markdown("#### 📋 Jak to działa?")
+    
     st.markdown("""
-    <div class="instruction-box">
-        <h4 style="margin-bottom: 20px; color: #667eea;">📋 Jak to działa?</h4>
-        
-        <div class="instruction-item">
-            <div class="instruction-number">1</div>
-            <div>Przeczytasz <strong>20 tekstów</strong> do analizy</div>
-        </div>
-        
-        <div class="instruction-item">
-            <div class="instruction-number">2</div>
-            <div>Dla każdego tekstu ocenisz <strong>sentyment</strong> (pozytywny, negatywny, neutralny)</div>
-        </div>
-        
-        <div class="instruction-item">
-            <div class="instruction-number">3</div>
-            <div>Następnie ocenisz <strong>emocje</strong> (radość, zaufanie, strach i inne)</div>
-        </div>
-        
-        <div class="instruction-item">
-            <div class="instruction-number">4</div>
-            <div>Użyj prostej skali: <strong>Brak/Niskie → Średnie → Wysokie</strong></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    **1.** Przeczytasz **20 tekstów** do analizy
+    
+    **2.** Dla każdego tekstu ocenisz **sentyment** (pozytywny, negatywny, neutralny)
+    
+    **3.** Następnie ocenisz **emocje** (radość, zaufanie, strach i inne)
+    
+    **4.** Użyj prostej skali: **Brak/Niskie → Średnie → Wysokie**
+    """)
     
     st.markdown("---")
     
@@ -377,7 +363,7 @@ def start_screen():
         label_visibility="collapsed"
     )
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("")
     
     # Start button
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -405,21 +391,14 @@ def coding_screen():
     with col2:
         st.markdown(f"<p style='text-align: right; font-size: 1.1rem; font-weight: 600; color: #667eea;'>{progress} / 20</p>", unsafe_allow_html=True)
     
-    # Coding stage FIRST (before text)
+    # Coding stage
     if st.session_state.coding_stage == 'sentiment':
-        sentiment_coding_ui()
+        sentiment_coding_ui(current_element['text'])
     else:
-        emotion_coding_ui()
-    
-    # Text card AFTER coding section
-    st.markdown(f"""
-    <div class="text-card">
-        <p>{current_element['text']}</p>
-    </div>
-    """, unsafe_allow_html=True)
+        emotion_coding_ui(current_element['text'])
 
 
-def sentiment_coding_ui():
+def sentiment_coding_ui(text):
     """UI for sentiment coding."""
     # Section header
     st.markdown("""
@@ -428,7 +407,14 @@ def sentiment_coding_ui():
     </div>
     """, unsafe_allow_html=True)
     
-    # Scale legend (once at the top)
+    # Text card - right after header
+    st.markdown(f"""
+    <div class="text-card">
+        <p>{text}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Scale legend
     render_scale_legend()
     
     sentiment_values = {}
@@ -447,7 +433,7 @@ def sentiment_coding_ui():
         )
         sentiment_values[key] = value
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("")
     
     # Next button
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -458,7 +444,7 @@ def sentiment_coding_ui():
             st.rerun()
 
 
-def emotion_coding_ui():
+def emotion_coding_ui(text):
     """UI for emotion coding."""
     # Section header
     st.markdown("""
@@ -467,7 +453,14 @@ def emotion_coding_ui():
     </div>
     """, unsafe_allow_html=True)
     
-    # Scale legend (once at the top)
+    # Text card - right after header
+    st.markdown(f"""
+    <div class="text-card">
+        <p>{text}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Scale legend
     render_scale_legend()
     
     emotion_values = {}
@@ -505,7 +498,7 @@ def emotion_coding_ui():
             )
             emotion_values[key] = value
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("")
     
     # Navigation buttons
     col1, col2, col3 = st.columns([1, 1, 1])
