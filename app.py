@@ -144,64 +144,31 @@ CUSTOM_CSS = """
     }
     
     /* Centered slider labels - nazwa sentymentu/emocji */
-    .stSlider label, [data-testid="stWidgetLabel"] {
-        text-align: center !important;
-        width: 100% !important;
+    [data-testid="stWidgetLabel"] {
         font-weight: 500 !important;
         color: #ffffff !important;
         font-size: 1rem !important;
-        margin-bottom: 5px !important;
-    }
-    
-    /* Segmented control styling */
-    .stSegmentedControl {
-        margin-bottom: 20px;
-    }
-    
-    .stSegmentedControl [data-testid="stWidgetLabel"] {
-        text-align: left !important;
-        font-size: 1rem !important;
-        color: #ffffff !important;
         margin-bottom: 8px !important;
     }
     
-    .stSegmentedControl button {
-        border-radius: 8px !important;
-        padding: 8px 16px !important;
-        font-weight: 500 !important;
-        transition: all 0.2s ease !important;
+    /* Pills/Chips styling */
+    .stElementContainer {
+        margin-bottom: 15px;
     }
     
-    .stSegmentedControl button[aria-checked="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important;
+    /* Rating item styling */
+    .rating-item {
+        background: rgba(255,255,255,0.05);
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 12px;
     }
     
-    /* Radio button styling as fallback */
-    .stRadio > div {
-        display: flex !important;
-        gap: 10px !important;
-        flex-wrap: wrap !important;
-    }
-    
-    .stRadio label {
-        background: rgba(255,255,255,0.1) !important;
-        padding: 10px 20px !important;
-        border-radius: 10px !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        border: 2px solid transparent !important;
-    }
-    
-    .stRadio label:hover {
-        background: rgba(102, 126, 234, 0.2) !important;
-        border-color: #667eea !important;
-    }
-    
-    .stRadio [data-testid="stWidgetLabel"] {
-        font-size: 1rem !important;
-        color: #ffffff !important;
-        margin-bottom: 10px !important;
+    .rating-label {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #ffffff;
+        margin-bottom: 10px;
     }
     
     /* Success message styling */
@@ -438,19 +405,18 @@ def sentiment_coding_ui(text):
     sentiment_values = {}
     
     # Scale options
-    scale_options = ["🟢 Brak/Niskie", "🟡 Średnie", "🔴 Wysokie"]
+    scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
-    # Create radio buttons for each sentiment
+    # Create pills for each sentiment
     for key, data in SENTIMENTS.items():
-        value = st.radio(
+        value = st.pills(
             data['pl'],
             options=scale_options,
-            index=0,
-            key=f"sentiment_{key}",
-            horizontal=True
+            default="Brak",
+            key=f"sentiment_{key}"
         )
-        # Convert to numeric value
-        sentiment_values[key] = scale_options.index(value)
+        # Convert to numeric value (0-3)
+        sentiment_values[key] = scale_options.index(value) if value else 0
     
     st.markdown("")
     
@@ -480,7 +446,7 @@ def emotion_coding_ui(text):
     emotion_values = {}
     
     # Scale options
-    scale_options = ["🟢 Brak/Niskie", "🟡 Średnie", "🔴 Wysokie"]
+    scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
     # Create two columns for emotions
     col1, col2 = st.columns(2)
@@ -489,25 +455,23 @@ def emotion_coding_ui(text):
     
     with col1:
         for key, data in emotions_list[:4]:
-            value = st.radio(
+            value = st.pills(
                 f"{data['icon']} {data['pl']}",
                 options=scale_options,
-                index=0,
-                key=f"emotion_{key}",
-                horizontal=True
+                default="Brak",
+                key=f"emotion_{key}"
             )
-            emotion_values[key] = scale_options.index(value)
+            emotion_values[key] = scale_options.index(value) if value else 0
     
     with col2:
         for key, data in emotions_list[4:]:
-            value = st.radio(
+            value = st.pills(
                 f"{data['icon']} {data['pl']}",
                 options=scale_options,
-                index=0,
-                key=f"emotion_{key}",
-                horizontal=True
+                default="Brak",
+                key=f"emotion_{key}"
             )
-            emotion_values[key] = scale_options.index(value)
+            emotion_values[key] = scale_options.index(value) if value else 0
     
     st.markdown("")
     
