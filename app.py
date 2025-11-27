@@ -60,14 +60,42 @@ CUSTOM_CSS = """
         font-size: 1.3rem;
     }
     
+    /* Coding container - integrated look */
+    .coding-container {
+        background: rgba(255,255,255,0.03);
+        border-radius: 15px;
+        padding: 0;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    
+    .coding-container .section-header {
+        margin: 0;
+        border-radius: 15px 15px 0 0;
+    }
+    
+    .text-card-integrated {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px 25px;
+        border-left: 4px solid #667eea;
+        margin: 0;
+    }
+    
+    .text-card-integrated p {
+        font-size: 16px;
+        line-height: 1.7;
+        color: #e0e0e0;
+        margin: 0;
+    }
+    
     /* Scale legend */
     .scale-legend {
         display: flex;
         justify-content: space-between;
-        background: rgba(255,255,255,0.05);
-        padding: 12px 20px;
-        border-radius: 10px;
-        margin: 15px 0;
+        background: rgba(102, 126, 234, 0.1);
+        padding: 10px 20px;
+        margin: 0;
+        border-radius: 0 0 15px 15px;
     }
     
     .scale-item {
@@ -77,20 +105,9 @@ CUSTOM_CSS = """
     
     .scale-label {
         font-size: 0.85rem;
-        color: #b0b0b0;
+        color: #a0a0a0;
+        font-weight: 500;
     }
-    
-    .scale-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-bottom: 5px;
-    }
-    
-    .scale-dot.low { background: #4CAF50; }
-    .scale-dot.mid { background: #FFC107; }
-    .scale-dot.high { background: #f44336; }
     
     /* Emotion/Sentiment labels */
     .coding-label {
@@ -156,9 +173,9 @@ CUSTOM_CSS = """
         display: none !important;
     }
     
-    /* Slider styling */
+    /* Slider styling - jednolity kolor */
     .stSlider > div > div > div {
-        background: linear-gradient(90deg, #4CAF50, #FFC107, #f44336) !important;
+        background: #667eea !important;
     }
     
     /* Success message styling */
@@ -305,26 +322,6 @@ def initialize_session():
         st.session_state.coder_id = ""
 
 
-def render_scale_legend():
-    """Render the scale legend."""
-    st.markdown("""
-    <div class="scale-legend">
-        <div class="scale-item">
-            <div class="scale-dot low"></div><br>
-            <span class="scale-label">Brak / Niskie</span>
-        </div>
-        <div class="scale-item">
-            <div class="scale-dot mid"></div><br>
-            <span class="scale-label">Średnie</span>
-        </div>
-        <div class="scale-item">
-            <div class="scale-dot high"></div><br>
-            <span class="scale-label">Wysokie</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
 def start_screen():
     """Display start screen."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -332,9 +329,9 @@ def start_screen():
     # Welcome header
     st.markdown("""
     <div class="welcome-card">
-        <h1>🎯 Kodowanie Sentymentu i Emocji</h1>
+        <h1>Kodowanie sentymentu i emocji w fake newsach</h1>
         <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-            Profesjonalne narzędzie do analizy tekstów
+            Narzędzie do manualnej analizy tekstów
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -400,36 +397,41 @@ def coding_screen():
 
 def sentiment_coding_ui(text):
     """UI for sentiment coding."""
-    # Section header
-    st.markdown("""
-    <div class="section-header">
-        <h3>😊 Oceń Sentyment</h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Text card - right after header
+    # Integrated container with header, text and scale
     st.markdown(f"""
-    <div class="text-card">
-        <p>{text}</p>
+    <div class="coding-container">
+        <div class="section-header">
+            <h3>Oceń natężenie każdego z sentymentów w tekście</h3>
+        </div>
+        <div class="text-card-integrated">
+            <p>{text}</p>
+        </div>
+        <div class="scale-legend">
+            <div class="scale-item">
+                <span class="scale-label">Brak / Niskie</span>
+            </div>
+            <div class="scale-item">
+                <span class="scale-label">Średnie</span>
+            </div>
+            <div class="scale-item">
+                <span class="scale-label">Wysokie</span>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Scale legend
-    render_scale_legend()
     
     sentiment_values = {}
     
     # Create sliders for each sentiment
     for key, data in SENTIMENTS.items():
         st.markdown(f"<div class='coding-label'>{data['pl']}</div>", unsafe_allow_html=True)
-        value = st.slider(
+        value = st.select_slider(
             f"sent_{key}",
-            min_value=0,
-            max_value=2,
+            options=[0, 1, 2],
+            format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
             value=0,
             key=f"sentiment_{key}",
-            label_visibility="collapsed",
-            format=""
+            label_visibility="collapsed"
         )
         sentiment_values[key] = value
     
@@ -446,22 +448,28 @@ def sentiment_coding_ui(text):
 
 def emotion_coding_ui(text):
     """UI for emotion coding."""
-    # Section header
-    st.markdown("""
-    <div class="section-header">
-        <h3>🎭 Oceń Emocje</h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Text card - right after header
+    # Integrated container with header, text and scale
     st.markdown(f"""
-    <div class="text-card">
-        <p>{text}</p>
+    <div class="coding-container">
+        <div class="section-header">
+            <h3>Oceń natężenie każdej z emocji w tekście</h3>
+        </div>
+        <div class="text-card-integrated">
+            <p>{text}</p>
+        </div>
+        <div class="scale-legend">
+            <div class="scale-item">
+                <span class="scale-label">Brak / Niskie</span>
+            </div>
+            <div class="scale-item">
+                <span class="scale-label">Średnie</span>
+            </div>
+            <div class="scale-item">
+                <span class="scale-label">Wysokie</span>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Scale legend
-    render_scale_legend()
     
     emotion_values = {}
     
@@ -473,28 +481,26 @@ def emotion_coding_ui(text):
     with col1:
         for key, data in emotions_list[:4]:
             st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
-            value = st.slider(
+            value = st.select_slider(
                 f"emo_{key}",
-                min_value=0,
-                max_value=2,
+                options=[0, 1, 2],
+                format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
                 value=0,
                 key=f"emotion_{key}",
-                label_visibility="collapsed",
-                format=""
+                label_visibility="collapsed"
             )
             emotion_values[key] = value
     
     with col2:
         for key, data in emotions_list[4:]:
             st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
-            value = st.slider(
+            value = st.select_slider(
                 f"emo_{key}",
-                min_value=0,
-                max_value=2,
+                options=[0, 1, 2],
+                format_func=lambda x: ["Brak/Niskie", "Średnie", "Wysokie"][x],
                 value=0,
                 key=f"emotion_{key}",
-                label_visibility="collapsed",
-                format=""
+                label_visibility="collapsed"
             )
             emotion_values[key] = value
     
