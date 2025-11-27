@@ -77,7 +77,6 @@ CUSTOM_CSS = """
     .text-card-integrated {
         background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
         padding: 20px 25px;
-        border-left: 4px solid #667eea;
         margin: 0;
         border-radius: 0 0 15px 15px;
     }
@@ -152,6 +151,13 @@ CUSTOM_CSS = """
         color: #ffffff !important;
         font-size: 1rem !important;
         margin-bottom: 5px !important;
+    }
+    
+    /* Hide slider value labels (Brak/Niskie, Średnie, Wysokie) */
+    .stSlider [data-testid="stTickBarMin"],
+    .stSlider [data-testid="stTickBarMax"],
+    [data-baseweb="slider"] > div > div:last-child {
+        display: none !important;
     }
     
     /* Slider styling - jednolity kolor */
