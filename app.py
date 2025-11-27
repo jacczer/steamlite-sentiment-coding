@@ -19,8 +19,8 @@ RESULTS_DIR.mkdir(exist_ok=True)
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
-@st.cache_resource
-def get_worksheet():
+@st.cache_resource(ttl=60)  # Cache tylko na 60 sekund, potem odświeża
+def get_worksheet(_force_refresh=None):
     """
     Establish connection to Google Sheets using service account credentials.
     Returns the first worksheet of the spreadsheet.
@@ -223,8 +223,15 @@ def start_screen():
     # Test connection button
     st.markdown("### 🔌 Test połączenia z Google Sheets")
     col_test1, col_test2, col_test3 = st.columns([1, 1, 1])
+    with col_test1:
+        if st.button("🔄 Wyczyść cache", use_container_width=True):
+            st.cache_resource.clear()
+            st.success("Cache wyczyszczony! Kliknij 'Testuj połączenie'")
+            st.rerun()
     with col_test2:
         if st.button("🧪 Testuj połączenie", use_container_width=True):
+            # Force fresh connection by clearing cache first
+            st.cache_resource.clear()
             with st.spinner("Sprawdzam połączenie..."):
                 ws = get_worksheet()
                 if ws:
