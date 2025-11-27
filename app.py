@@ -18,28 +18,192 @@ RESULTS_DIR.mkdir(exist_ok=True)
 # Google Sheets configuration
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
+# Custom CSS for modern UI
+CUSTOM_CSS = """
+<style>
+    /* Main container styling */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 900px;
+    }
+    
+    /* Text card styling */
+    .text-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 25px 30px;
+        border-radius: 15px;
+        border-left: 5px solid #4CAF50;
+        margin: 20px 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    
+    .text-card p {
+        font-size: 17px;
+        line-height: 1.8;
+        color: #e0e0e0;
+        margin: 0;
+    }
+    
+    /* Section headers */
+    .section-header {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        padding: 15px 25px;
+        border-radius: 10px;
+        margin: 25px 0 15px 0;
+        text-align: center;
+    }
+    
+    .section-header h3 {
+        color: white;
+        margin: 0;
+        font-size: 1.3rem;
+    }
+    
+    /* Scale legend */
+    .scale-legend {
+        display: flex;
+        justify-content: space-between;
+        background: rgba(255,255,255,0.05);
+        padding: 12px 20px;
+        border-radius: 10px;
+        margin: 15px 0;
+    }
+    
+    .scale-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .scale-label {
+        font-size: 0.85rem;
+        color: #b0b0b0;
+    }
+    
+    .scale-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-bottom: 5px;
+    }
+    
+    .scale-dot.low { background: #4CAF50; }
+    .scale-dot.mid { background: #FFC107; }
+    .scale-dot.high { background: #f44336; }
+    
+    /* Emotion/Sentiment labels */
+    .coding-label {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #ffffff;
+        padding: 8px 0 5px 5px;
+        margin-top: 10px;
+    }
+    
+    /* Progress styling */
+    .progress-container {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 3px;
+        margin-bottom: 10px;
+    }
+    
+    /* Welcome card */
+    .welcome-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        margin: 20px 0;
+    }
+    
+    .welcome-card h1 {
+        color: white;
+        margin-bottom: 10px;
+    }
+    
+    /* Instruction box */
+    .instruction-box {
+        background: rgba(255,255,255,0.05);
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+    }
+    
+    .instruction-item {
+        display: flex;
+        align-items: flex-start;
+        margin: 15px 0;
+    }
+    
+    .instruction-number {
+        background: #667eea;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    /* Hide slider labels */
+    .stSlider label {
+        display: none !important;
+    }
+    
+    /* Slider styling */
+    .stSlider > div > div > div {
+        background: linear-gradient(90deg, #4CAF50, #FFC107, #f44336) !important;
+    }
+    
+    /* Success message styling */
+    .success-banner {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        margin: 30px 0;
+    }
+    
+    /* Input field styling */
+    .stTextInput > div > div > input {
+        border-radius: 10px;
+        border: 2px solid #667eea;
+        padding: 10px 15px;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+</style>
+"""
 
-@st.cache_resource(ttl=60)  # Cache tylko na 60 sekund, potem odświeża
+
+@st.cache_resource(ttl=60)
 def get_worksheet(_force_refresh=None):
-    """
-    Establish connection to Google Sheets using service account credentials.
-    Returns the first worksheet of the spreadsheet.
-    """
+    """Establish connection to Google Sheets."""
     try:
-        # Check if secrets are available
         if "SPREADSHEET_ID" not in st.secrets:
-            st.error("❌ Brak 'SPREADSHEET_ID' w secrets!")
             return None
         
-        # Build credentials dict - try different formats
         creds_info = None
         
-        # Method 1: Full JSON as string (for local development)
         if "service_account_json" in st.secrets:
-            import json
             creds_info = json.loads(st.secrets["service_account_json"])
-        
-        # Method 2: Individual fields as TOML (for Streamlit Cloud)
         elif "type" in st.secrets and "project_id" in st.secrets:
             creds_info = {
                 "type": st.secrets["type"],
@@ -54,53 +218,33 @@ def get_worksheet(_force_refresh=None):
                 "client_x509_cert_url": st.secrets["client_x509_cert_url"],
                 "universe_domain": st.secrets.get("universe_domain", "googleapis.com")
             }
-        
-        # Method 3: Dict with fields (backward compatibility)
         elif "gsheets" in st.secrets:
             creds_info = dict(st.secrets["gsheets"])
         
         if not creds_info:
-            st.error("❌ Brak konfiguracji credentials w secrets! Dodaj 'service_account_json' (JSON string) lub osobne pola TOML (type, project_id, private_key, etc.)")
             return None
         
         creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         client = gspread.authorize(creds)
-        
-        SPREADSHEET_ID = st.secrets["SPREADSHEET_ID"]
-        sh = client.open_by_key(SPREADSHEET_ID)
-        worksheet = sh.sheet1  # pierwszy arkusz (first worksheet)
-        
-        return worksheet
-    except Exception as e:
-        st.error(f"❌ Błąd połączenia z Google Sheets: {type(e).__name__}")
+        sh = client.open_by_key(st.secrets["SPREADSHEET_ID"])
+        return sh.sheet1
+    except Exception:
         return None
 
 
 def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id="unknown"):
-    """
-    Save coding results to Google Sheets.
-    Appends a new row with all coding information.
-    """
+    """Save coding results to Google Sheets."""
     try:
         ws = get_worksheet()
         if ws is None:
-            st.error("❌ Nie można zapisać - brak połączenia z arkuszem")
             return False
         
-        # Use timezone-aware datetime
         timestamp = datetime.now(timezone.utc).isoformat()
-        
-        # Prepare row data: [timestamp, coder_id, oid, text, sentiment values, emotion values]
         row = [
-            timestamp,
-            str(coder_id),
-            str(oid),
-            str(text)[:500],  # Limit text length to 500 chars
-            # Sentiment values
+            timestamp, str(coder_id), str(oid), str(text)[:500],
             int(sentiment_values.get("positive", 0)),
             int(sentiment_values.get("negative", 0)),
             int(sentiment_values.get("neutral", 0)),
-            # Emotion values
             int(emotion_values.get("joy", 0)),
             int(emotion_values.get("trust", 0)),
             int(emotion_values.get("anticipation", 0)),
@@ -110,44 +254,28 @@ def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id=
             int(emotion_values.get("disgust", 0)),
             int(emotion_values.get("anger", 0))
         ]
-        
-        # Append row to sheet
         ws.append_row(row, value_input_option='USER_ENTERED')
-        
         return True
-        
-    except Exception as e:
-        st.error(f"❌ Błąd zapisu do Google Sheets: {type(e).__name__}")
+    except Exception:
         return False
 
 
-# Sentiment and emotion categories
-SENTIMENTS = ["positive", "negative", "neutral"]
-EMOTIONS = ["joy", "trust", "anticipation", "surprise", "fear", "sadness", "disgust", "anger"]
-
-# Polish labels for sentiment and emotions
-SENTIMENT_LABELS_PL = {
-    "positive": "Pozytywny",
-    "negative": "Negatywny", 
-    "neutral": "Neutralny"
+# Categories configuration
+SENTIMENTS = {
+    "positive": {"pl": "😊 Pozytywny", "icon": "😊"},
+    "negative": {"pl": "😢 Negatywny", "icon": "😢"},
+    "neutral": {"pl": "😐 Neutralny", "icon": "😐"}
 }
 
-EMOTION_LABELS_PL = {
-    "joy": "Radość",
-    "trust": "Zaufanie",
-    "anticipation": "Oczekiwanie",
-    "surprise": "Zaskoczenie",
-    "fear": "Strach",
-    "sadness": "Smutek",
-    "disgust": "Wstręt",
-    "anger": "Złość"
-}
-
-# Scale labels
-SCALE_LABELS = {
-    0: "Brak/Niskie",
-    1: "Średnie",
-    2: "Wysokie"
+EMOTIONS = {
+    "joy": {"pl": "Radość", "icon": "😄"},
+    "trust": {"pl": "Zaufanie", "icon": "🤝"},
+    "anticipation": {"pl": "Oczekiwanie", "icon": "🔮"},
+    "surprise": {"pl": "Zaskoczenie", "icon": "😲"},
+    "fear": {"pl": "Strach", "icon": "😨"},
+    "sadness": {"pl": "Smutek", "icon": "😢"},
+    "disgust": {"pl": "Wstręt", "icon": "🤢"},
+    "anger": {"pl": "Złość", "icon": "😠"}
 }
 
 
@@ -161,70 +289,102 @@ def initialize_session():
     """Initialize session state variables."""
     if 'screen' not in st.session_state:
         st.session_state.screen = 'start'
-    
     if 'data' not in st.session_state:
         st.session_state.data = load_data()
-    
     if 'current_index' not in st.session_state:
         st.session_state.current_index = 0
-    
     if 'session_elements' not in st.session_state:
-        # Select 20 elements for this session
         st.session_state.session_elements = st.session_state.data[:20]
-    
     if 'coding_stage' not in st.session_state:
-        st.session_state.coding_stage = 'sentiment'  # 'sentiment' or 'emotion'
-    
+        st.session_state.coding_stage = 'sentiment'
     if 'results' not in st.session_state:
         st.session_state.results = []
-    
     if 'current_coding' not in st.session_state:
-        st.session_state.current_coding = {
-            'sentiment': {},
-            'emotion': {}
-        }
-    
+        st.session_state.current_coding = {'sentiment': {}, 'emotion': {}}
     if 'coder_id' not in st.session_state:
         st.session_state.coder_id = ""
 
 
+def render_scale_legend():
+    """Render the scale legend."""
+    st.markdown("""
+    <div class="scale-legend">
+        <div class="scale-item">
+            <div class="scale-dot low"></div><br>
+            <span class="scale-label">Brak / Niskie</span>
+        </div>
+        <div class="scale-item">
+            <div class="scale-dot mid"></div><br>
+            <span class="scale-label">Średnie</span>
+        </div>
+        <div class="scale-item">
+            <div class="scale-dot high"></div><br>
+            <span class="scale-label">Wysokie</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def start_screen():
     """Display start screen."""
-    st.title("🎯 Aplikacja do kodowania sentymentu i emocji")
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
+    # Welcome header
     st.markdown("""
-    ### Witamy w aplikacji do manualnego kodowania!
+    <div class="welcome-card">
+        <h1>🎯 Kodowanie Sentymentu i Emocji</h1>
+        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+            Profesjonalne narzędzie do analizy tekstów
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    **Instrukcja:**
-    1. W tej sesji zakodujemy **20 elementów tekstowych**
-    2. Dla każdego tekstu zakodujemy:
-       - **Sentyment** (3 kategorie: pozytywny, negatywny, neutralny)
-       - **Emocje** (8 kategorii: radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość)
-    3. Dla każdej kategorii określ natężenie na skali:
-       - **Brak/Niskie** (0)
-       - **Średnie** (1)
-       - **Wysokie** (2)
-    """)
+    # Instructions
+    st.markdown("""
+    <div class="instruction-box">
+        <h4 style="margin-bottom: 20px; color: #667eea;">📋 Jak to działa?</h4>
+        
+        <div class="instruction-item">
+            <div class="instruction-number">1</div>
+            <div>Przeczytasz <strong>20 tekstów</strong> do analizy</div>
+        </div>
+        
+        <div class="instruction-item">
+            <div class="instruction-number">2</div>
+            <div>Dla każdego tekstu ocenisz <strong>sentyment</strong> (pozytywny, negatywny, neutralny)</div>
+        </div>
+        
+        <div class="instruction-item">
+            <div class="instruction-number">3</div>
+            <div>Następnie ocenisz <strong>emocje</strong> (radość, zaufanie, strach i inne)</div>
+        </div>
+        
+        <div class="instruction-item">
+            <div class="instruction-number">4</div>
+            <div>Użyj prostej skali: <strong>Brak/Niskie → Średnie → Wysokie</strong></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Coder ID input
-    st.markdown("### 👤 Identyfikacja kodera")
+    st.markdown("#### 👤 Twój identyfikator")
     coder_id = st.text_input(
-        "Podaj swój identyfikator (np. inicjały):",
-        placeholder="np. JK, AM, PW",
+        "Identyfikator",
+        placeholder="Wpisz swoje inicjały (np. JK, AM)",
         max_chars=20,
-        help="Ten identyfikator będzie zapisany wraz z Twoimi kodowaniami"
+        label_visibility="collapsed"
     )
     
-    st.markdown("---")
-    st.markdown("**Kliknij przycisk START, aby rozpocząć kodowanie.**")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Start button
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🚀 START", use_container_width=True, type="primary"):
+        if st.button("🚀 ROZPOCZNIJ KODOWANIE", use_container_width=True, type="primary"):
             if not coder_id.strip():
-                st.warning("⚠️ Proszę podać identyfikator przed rozpoczęciem!")
+                st.warning("Proszę podać identyfikator przed rozpoczęciem")
             else:
                 st.session_state.coder_id = coder_id.strip()
                 st.session_state.screen = 'coding'
@@ -233,20 +393,26 @@ def start_screen():
 
 def coding_screen():
     """Display coding screen."""
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    
     current_element = st.session_state.session_elements[st.session_state.current_index]
     progress = st.session_state.current_index + 1
     
-    # Progress indicator
-    st.progress(progress / 20)
-    st.caption(f"Element {progress} / 20")
+    # Progress header
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.progress(progress / 20)
+    with col2:
+        st.markdown(f"<p style='text-align: right; font-size: 1.1rem; font-weight: 600; color: #667eea;'>{progress} / 20</p>", unsafe_allow_html=True)
     
-    # Display text
-    st.markdown("### 📄 Tekst do zakodowania:")
-    st.markdown(f"<div style='background-color: #0e1117; padding: 20px; border-radius: 5px; border-left: 5px solid #1f77b4;'><p style='color: white; font-size: 16px; line-height: 1.6;'>{current_element['text']}</p></div>", unsafe_allow_html=True)
+    # Text card
+    st.markdown(f"""
+    <div class="text-card">
+        <p>{current_element['text']}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown("---")
-    
-    # Coding stage: Sentiment or Emotion
+    # Coding stage
     if st.session_state.coding_stage == 'sentiment':
         sentiment_coding_ui()
     else:
@@ -255,46 +421,36 @@ def coding_screen():
 
 def sentiment_coding_ui():
     """UI for sentiment coding."""
-    st.markdown("### 😊😐😢 Kodowanie sentymentu")
-    st.markdown("**Określ natężenie każdego typu sentymentu:**")
-    
-    # Scale description at the top
+    # Section header
     st.markdown("""
-    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px;'>
-        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
-        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
-        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
+    <div class="section-header">
+        <h3>😊 Oceń Sentyment</h3>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Scale legend (once at the top)
+    render_scale_legend()
     
     sentiment_values = {}
     
-    for sentiment in SENTIMENTS:
-        st.markdown(f"**{SENTIMENT_LABELS_PL[sentiment]}:**")
-        value = st.slider(
-            f"slider_{sentiment}",
-            min_value=0,
-            max_value=2,
-            value=0,
-            step=1,
-            key=f"sentiment_{sentiment}",
+    # Create sliders for each sentiment
+    for key, data in SENTIMENTS.items():
+        st.markdown(f"<div class='coding-label'>{data['pl']}</div>", unsafe_allow_html=True)
+        value = st.select_slider(
+            f"sent_{key}",
+            options=["Brak/Niskie", "Średnie", "Wysokie"],
+            value="Brak/Niskie",
+            key=f"sentiment_{key}",
             label_visibility="collapsed"
         )
-        sentiment_values[sentiment] = value
+        sentiment_values[key] = {"Brak/Niskie": 0, "Średnie": 1, "Wysokie": 2}[value]
     
-    # Scale description at the bottom
-    st.markdown("""
-    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-top: 5px;'>
-        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
-        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
-        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Next button
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("➡️ Dalej do emocji", use_container_width=True, type="primary"):
+        if st.button("DALEJ → Emocje", use_container_width=True, type="primary"):
             st.session_state.current_coding['sentiment'] = sentiment_values
             st.session_state.coding_stage = 'emotion'
             st.rerun()
@@ -302,51 +458,63 @@ def sentiment_coding_ui():
 
 def emotion_coding_ui():
     """UI for emotion coding."""
-    st.markdown("### 🎭 Kodowanie emocji")
-    st.markdown("**Określ natężenie każdej emocji:**")
-    
-    # Scale description at the top
+    # Section header
     st.markdown("""
-    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px;'>
-        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
-        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
-        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
+    <div class="section-header">
+        <h3>🎭 Oceń Emocje</h3>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Scale legend (once at the top)
+    render_scale_legend()
     
     emotion_values = {}
     
-    for emotion in EMOTIONS:
-        st.markdown(f"**{EMOTION_LABELS_PL[emotion]}:**")
-        value = st.slider(
-            f"slider_{emotion}",
-            min_value=0,
-            max_value=2,
-            value=0,
-            step=1,
-            key=f"emotion_{emotion}",
-            label_visibility="collapsed"
-        )
-        emotion_values[emotion] = value
+    # Create two columns for emotions
+    col1, col2 = st.columns(2)
     
-    # Scale description at the bottom
-    st.markdown("""
-    <div style='display: flex; justify-content: space-between; padding: 0 10px; margin-top: 5px;'>
-        <span style='color: #ffffff;'><strong>0</strong><br/>Brak/Niskie</span>
-        <span style='color: #ffffff;'><strong>1</strong><br/>Średnie</span>
-        <span style='color: #ffffff;'><strong>2</strong><br/>Wysokie</span>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("---")
+    emotions_list = list(EMOTIONS.items())
     
-    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        for key, data in emotions_list[:4]:
+            st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
+            value = st.select_slider(
+                f"emo_{key}",
+                options=["Brak/Niskie", "Średnie", "Wysokie"],
+                value="Brak/Niskie",
+                key=f"emotion_{key}",
+                label_visibility="collapsed"
+            )
+            emotion_values[key] = {"Brak/Niskie": 0, "Średnie": 1, "Wysokie": 2}[value]
+    
     with col2:
-        if st.button("✅ Zapisz i kontynuuj", use_container_width=True, type="primary"):
-            # Save current coding
+        for key, data in emotions_list[4:]:
+            st.markdown(f"<div class='coding-label'>{data['icon']} {data['pl']}</div>", unsafe_allow_html=True)
+            value = st.select_slider(
+                f"emo_{key}",
+                options=["Brak/Niskie", "Średnie", "Wysokie"],
+                value="Brak/Niskie",
+                key=f"emotion_{key}",
+                label_visibility="collapsed"
+            )
+            emotion_values[key] = {"Brak/Niskie": 0, "Średnie": 1, "Wysokie": 2}[value]
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Navigation buttons
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    with col1:
+        if st.button("← Wróć", use_container_width=True):
+            st.session_state.coding_stage = 'sentiment'
+            st.rerun()
+    
+    with col3:
+        if st.button("ZAPISZ ✓", use_container_width=True, type="primary"):
             current_element = st.session_state.session_elements[st.session_state.current_index]
             
-            # Save to Google Sheets immediately
-            success = save_to_google_sheets(
+            # Save to Google Sheets
+            save_to_google_sheets(
                 oid=current_element["$oid"],
                 text=current_element["text"],
                 sentiment_values=st.session_state.current_coding['sentiment'],
@@ -354,10 +522,7 @@ def emotion_coding_ui():
                 coder_id=st.session_state.coder_id
             )
             
-            if success:
-                st.success("✅ Zapisano do Google Sheets!", icon="✅")
-            
-            # Also save to local results for backup (optional)
+            # Local backup
             result = {
                 "$oid": current_element["$oid"],
                 "text": current_element["text"],
@@ -371,19 +536,15 @@ def emotion_coding_ui():
             st.session_state.coding_stage = 'sentiment'
             st.session_state.current_index += 1
             
-            # Check if session is complete
             if st.session_state.current_index >= 20:
-                save_results()  # Local backup
+                save_results()
                 st.session_state.screen = 'end'
             
             st.rerun()
 
 
 def save_results():
-    """
-    Save coding results to JSON file (LOCAL BACKUP ONLY).
-    Primary data storage is Google Sheets.
-    """
+    """Save coding results to JSON file (local backup)."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = RESULTS_DIR / f"manual_coding_{timestamp}.json"
     
@@ -395,28 +556,33 @@ def save_results():
 
 def end_screen():
     """Display end screen."""
-    st.title("🎉 Gratulacje!")
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
     st.markdown("""
-    ### Zakończyłeś kodowanie!
+    <div class="success-banner">
+        <h1 style="color: white; margin-bottom: 10px;">🎉 Gratulacje!</h1>
+        <p style="color: rgba(255,255,255,0.9); font-size: 1.2rem;">
+            Pomyślnie zakończyłeś kodowanie wszystkich tekstów
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    Pomyślnie zakodowano **20 elementów**.
-    """)
-    
-    st.success(f"✅ Wyniki zapisano w pliku: `{st.session_state.results_file.name}`")
-    
-    st.markdown("---")
-    
-    # Display summary
-    st.markdown("### 📊 Podsumowanie sesji:")
-    st.metric("Zakodowane elementy", "20")
-    
-    st.markdown("---")
-    
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Summary
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔄 Nowa sesja", use_container_width=True, type="primary"):
-            # Reset session
+        st.markdown("""
+        <div style="text-align: center; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 15px;">
+            <h2 style="color: #4CAF50; margin-bottom: 10px;">20</h2>
+            <p style="color: #b0b0b0;">zakodowanych tekstów</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # New session button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🔄 ROZPOCZNIJ NOWĄ SESJĘ", use_container_width=True, type="primary"):
             st.session_state.clear()
             st.rerun()
 
@@ -424,14 +590,13 @@ def end_screen():
 def main():
     """Main application logic."""
     st.set_page_config(
-        page_title="Kodowanie sentymentu i emocji",
+        page_title="Kodowanie Sentymentu i Emocji",
         page_icon="🎯",
-        layout="wide"
+        layout="centered"
     )
     
     initialize_session()
     
-    # Route to appropriate screen
     if st.session_state.screen == 'start':
         start_screen()
     elif st.session_state.screen == 'coding':
