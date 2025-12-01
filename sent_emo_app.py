@@ -107,11 +107,6 @@ CUSTOM_CSS = """
         margin: 0;
     }
     
-    /* Slider container spacing */
-    .stSlider {
-        margin-bottom: 15px;
-    }
-    
     /* Progress styling */
     .progress-container {
         background: rgba(255,255,255,0.1);
@@ -162,47 +157,44 @@ CUSTOM_CSS = """
         flex-shrink: 0;
     }
     
-    /* Centered slider labels - nazwa sentymentu/emocji */
+    /* Hide default widget labels */
     [data-testid="stWidgetLabel"] {
-        font-weight: 500 !important;
-        color: #ffffff !important;
-        font-size: 1rem !important;
-        margin-bottom: 8px !important;
+        display: none !important;
     }
     
     /* Global spacing reduction for compact look */
     .stElementContainer {
-        margin-bottom: 2px;
+        margin-bottom: 0px;
     }
     
     /* Rating item styling - Top part of the card */
-    .rating-item {
-        background: rgba(255,255,255,0.05);
-        padding: 10px 15px 2px 15px;
-        border-radius: 10px 10px 0 0;
-        margin-top: 8px;
+    .rating-item, .rating-card {
+        padding: 8px 12px 8px 12px;
+        border-radius: 8px;
+        margin-top: 2px;
+        margin-bottom: 0px;
     }
     
     .rating-label {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 600;
         color: #ffffff;
-        margin-bottom: 0px;
+        margin-bottom: 1px;
     }
     
     .rating-desc {
-        font-size: 0.75rem;
-        color: #b0b0b0;
+        font-size: 0.7rem;
+        color: #c0c0c0;
         margin-bottom: 0px;
         font-style: italic;
-        line-height: 1.2;
+        line-height: 1.15;
     }
     
-    /* Slider styling adjustments - Bottom part of the card */
+    /* Slider container - standard Streamlit styling with top margin */
     .stSlider {
-        background: rgba(255,255,255,0.05);
-        padding: 0px 15px 10px 15px;
-        border-radius: 0 0 10px 10px;
+        padding-top: 8px !important;
+        margin-bottom: 0px !important;
+        background: transparent !important;
     }
     
     /* Success message styling */
@@ -232,6 +224,20 @@ CUSTOM_CSS = """
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Dynamic thumb colors based on position */
+    .slider-brak [data-baseweb="slider"] [role="slider"] {
+        background: #4CAF50 !important;
+    }
+    .slider-niskie [data-baseweb="slider"] [role="slider"] {
+        background: #8BC34A !important;
+    }
+    .slider-srednie [data-baseweb="slider"] [role="slider"] {
+        background: #FF9800 !important;
+    }
+    .slider-wysokie [data-baseweb="slider"] [role="slider"] {
+        background: #f44336 !important;
     }
 </style>
 """
@@ -314,22 +320,30 @@ def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id=
         return False, str(e)
 
 
-# Categories configuration
+# Categories configuration with unique subtle background colors
 SENTIMENTS = {
-    "positive": {"pl": "😊 Pozytywny", "icon": "😊"},
-    "negative": {"pl": "😢 Negatywny", "icon": "😢"},
-    "neutral": {"pl": "😐 Neutralny", "icon": "😐"}
+    "positive": {"pl": "😊 Pozytywny", "icon": "😊", "bg": "rgba(76, 175, 80, 0.15)", "border": "#4CAF50"},
+    "negative": {"pl": "😢 Negatywny", "icon": "😢", "bg": "rgba(244, 67, 54, 0.15)", "border": "#f44336"},
+    "neutral": {"pl": "😐 Neutralny", "icon": "😐", "bg": "rgba(158, 158, 158, 0.15)", "border": "#9E9E9E"}
 }
 
 EMOTIONS = {
-    "joy": {"pl": "Radość", "icon": "😄"},
-    "trust": {"pl": "Zaufanie", "icon": "🤝"},
-    "anticipation": {"pl": "Oczekiwanie", "icon": "🔮"},
-    "surprise": {"pl": "Zaskoczenie", "icon": "😲"},
-    "fear": {"pl": "Strach", "icon": "😨"},
-    "sadness": {"pl": "Smutek", "icon": "😢"},
-    "disgust": {"pl": "Wstręt", "icon": "🤢"},
-    "anger": {"pl": "Złość", "icon": "😠"}
+    "joy": {"pl": "Radość", "icon": "😄", "bg": "rgba(255, 235, 59, 0.12)", "border": "#FFEB3B"},
+    "trust": {"pl": "Zaufanie", "icon": "🤝", "bg": "rgba(76, 175, 80, 0.12)", "border": "#4CAF50"},
+    "anticipation": {"pl": "Oczekiwanie", "icon": "🔮", "bg": "rgba(156, 39, 176, 0.12)", "border": "#9C27B0"},
+    "surprise": {"pl": "Zaskoczenie", "icon": "😲", "bg": "rgba(255, 152, 0, 0.12)", "border": "#FF9800"},
+    "fear": {"pl": "Strach", "icon": "😨", "bg": "rgba(33, 150, 243, 0.12)", "border": "#2196F3"},
+    "sadness": {"pl": "Smutek", "icon": "😢", "bg": "rgba(63, 81, 181, 0.12)", "border": "#3F51B5"},
+    "disgust": {"pl": "Wstręt", "icon": "🤢", "bg": "rgba(139, 195, 74, 0.12)", "border": "#8BC34A"},
+    "anger": {"pl": "Złość", "icon": "😠", "bg": "rgba(244, 67, 54, 0.12)", "border": "#f44336"}
+}
+
+# Color mapping for slider thumb based on value
+SLIDER_COLORS = {
+    "Brak": "#4CAF50",      # Green
+    "Niskie": "#8BC34A",    # Light green
+    "Średnie": "#FF9800",   # Orange
+    "Wysokie": "#f44336"    # Red
 }
 
 
@@ -419,12 +433,21 @@ def coding_screen():
     current_element = st.session_state.session_elements[st.session_state.current_index]
     progress = st.session_state.current_index + 1
     
-    # Progress header
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.progress(progress / 20)
-    with col2:
-        st.markdown(f"<p style='text-align: right; font-size: 1.1rem; font-weight: 600; color: #667eea;'>{progress} / 20</p>", unsafe_allow_html=True)
+    # Modern compact progress header
+    progress_percent = int((progress / 20) * 100)
+    st.markdown(f"""
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; margin-bottom: 10px;">
+        <div style="flex: 1; margin-right: 15px;">
+            <div style="background: rgba(255,255,255,0.1); border-radius: 10px; height: 8px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: {progress_percent}%; border-radius: 10px; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 1.2rem; font-weight: 700; color: #667eea;">{progress}</span>
+            <span style="font-size: 0.85rem; color: #888;">/ 20 tekstów</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Coding stage
     if st.session_state.coding_stage == 'sentiment':
@@ -435,31 +458,48 @@ def coding_screen():
 
 def sentiment_coding_ui(text):
     """UI for sentiment coding."""
-    # Header and text container
-    st.markdown(f"""
-    <div class="coding-container">
-        <div class="section-header">
-            <h3>Oceń natężenie każdego z sentymentów w tekście</h3>
-        </div>
-        <div class="text-card-integrated">
-            <p>{text}</p>
+    # Step indicator
+    st.markdown("""
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">1</div>
+        <div>
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px;">Krok 1 z 2</div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #fff;">Sentyment</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
+    # Text to analyze
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #667eea; margin-bottom: 15px;">
+        <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">📝 Tekst do oceny</div>
+        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Instruction
+    st.markdown("""
+    <div style="font-size: 0.8rem; color: #b0b0b0; margin-bottom: 10px;">
+        ↓ Dla każdego sentymentu wybierz poziom natężenia (Brak → Wysokie)
+    </div>
+    """, unsafe_allow_html=True)
+    
     sentiment_values = {}
+    slider_values_for_css = {}
     
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
     # Create sliders for each sentiment
-    for key, data in SENTIMENTS.items():
+    for idx, (key, data) in enumerate(SENTIMENTS.items()):
         # Get definition for tooltip
         definition = DEFINITIONS["sentiments"].get(key, "")
+        bg_color = data.get('bg', 'rgba(255,255,255,0.05)')
+        border_color = data.get('border', '#667eea')
         
-        # Label and description
+        # Full card with label, description and slider background
         st.markdown(f"""
-        <div class="rating-item">
+        <div class="rating-card" style="background: {bg_color}; border-left: 3px solid {border_color}; border-radius: 8px; padding: 8px 12px; margin-top: 6px;">
             <div class="rating-label">{data['pl']}</div>
             <div class="rating-desc">{definition}</div>
         </div>
@@ -473,6 +513,8 @@ def sentiment_coding_ui(text):
             key=f"sentiment_{key}",
             label_visibility="collapsed"
         )
+        
+        slider_values_for_css[f"sentiment_{key}"] = (value, bg_color)
         
         # Convert to numeric value (0-3)
         sentiment_values[key] = scale_options.index(value)
@@ -490,19 +532,34 @@ def sentiment_coding_ui(text):
 
 def emotion_coding_ui(text):
     """UI for emotion coding."""
-    # Header and text container
-    st.markdown(f"""
-    <div class="coding-container">
-        <div class="section-header">
-            <h3>Oceń natężenie każdej z emocji w tekście</h3>
-        </div>
-        <div class="text-card-integrated">
-            <p>{text}</p>
+    # Step indicator
+    st.markdown("""
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <div style="background: #764ba2; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">2</div>
+        <div>
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px;">Krok 2 z 2</div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #fff;">Emocje</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
+    # Text to analyze
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #764ba2; margin-bottom: 15px;">
+        <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">📝 Tekst do oceny</div>
+        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Instruction
+    st.markdown("""
+    <div style="font-size: 0.8rem; color: #b0b0b0; margin-bottom: 10px;">
+        ↓ Dla każdej emocji wybierz poziom natężenia (Brak → Wysokie)
+    </div>
+    """, unsafe_allow_html=True)
+    
     emotion_values = {}
+    slider_values_for_css = {}
     
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
@@ -513,11 +570,13 @@ def emotion_coding_ui(text):
     emotions_list = list(EMOTIONS.items())
     
     with col1:
-        for key, data in emotions_list[:4]:
+        for idx, (key, data) in enumerate(emotions_list[:4]):
             definition = DEFINITIONS["emotions"].get(key, "")
+            bg_color = data.get('bg', 'rgba(255,255,255,0.05)')
+            border_color = data.get('border', '#667eea')
             
             st.markdown(f"""
-            <div class="rating-item">
+            <div class="rating-card" style="background: {bg_color}; border-left: 3px solid {border_color}; border-radius: 8px; padding: 8px 12px; margin-top: 6px;">
                 <div class="rating-label">{data['icon']} {data['pl']}</div>
                 <div class="rating-desc">{definition}</div>
             </div>
@@ -531,13 +590,16 @@ def emotion_coding_ui(text):
                 label_visibility="collapsed"
             )
             emotion_values[key] = scale_options.index(value)
+            slider_values_for_css[f"emotion_{key}_col1_{idx}"] = (value, bg_color)
     
     with col2:
-        for key, data in emotions_list[4:]:
+        for idx, (key, data) in enumerate(emotions_list[4:]):
             definition = DEFINITIONS["emotions"].get(key, "")
+            bg_color = data.get('bg', 'rgba(255,255,255,0.05)')
+            border_color = data.get('border', '#667eea')
             
             st.markdown(f"""
-            <div class="rating-item">
+            <div class="rating-card" style="background: {bg_color}; border-left: 3px solid {border_color}; border-radius: 8px; padding: 8px 12px; margin-top: 6px;">
                 <div class="rating-label">{data['icon']} {data['pl']}</div>
                 <div class="rating-desc">{definition}</div>
             </div>
@@ -551,6 +613,7 @@ def emotion_coding_ui(text):
                 label_visibility="collapsed"
             )
             emotion_values[key] = scale_options.index(value)
+            slider_values_for_css[f"emotion_{key}_col2_{idx}"] = (value, bg_color)
     
     st.markdown("")
     
