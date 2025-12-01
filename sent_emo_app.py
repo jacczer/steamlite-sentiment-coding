@@ -170,24 +170,39 @@ CUSTOM_CSS = """
         margin-bottom: 8px !important;
     }
     
-    /* Pills/Chips styling */
+    /* Global spacing reduction for compact look */
     .stElementContainer {
-        margin-bottom: 15px;
+        margin-bottom: 2px;
     }
     
-    /* Rating item styling */
+    /* Rating item styling - Top part of the card */
     .rating-item {
         background: rgba(255,255,255,0.05);
-        padding: 15px 20px;
-        border-radius: 12px;
-        margin-bottom: 12px;
+        padding: 10px 15px 2px 15px;
+        border-radius: 10px 10px 0 0;
+        margin-top: 8px;
     }
     
     .rating-label {
-        font-size: 1rem;
-        font-weight: 500;
+        font-size: 0.9rem;
+        font-weight: 600;
         color: #ffffff;
-        margin-bottom: 10px;
+        margin-bottom: 0px;
+    }
+    
+    .rating-desc {
+        font-size: 0.75rem;
+        color: #b0b0b0;
+        margin-bottom: 0px;
+        font-style: italic;
+        line-height: 1.2;
+    }
+    
+    /* Slider styling adjustments - Bottom part of the card */
+    .stSlider {
+        background: rgba(255,255,255,0.05);
+        padding: 0px 15px 10px 15px;
+        border-radius: 0 0 10px 10px;
     }
     
     /* Success message styling */
@@ -352,7 +367,7 @@ def start_screen():
     st.markdown("""
     <div class="welcome-card">
         <h1>Kodowanie sentymentu i emocji w fake newsach</h1>
-        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+        <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">
             Narzędzie do manualnej analizy tekstów
         </p>
     </div>
@@ -362,13 +377,14 @@ def start_screen():
     st.markdown("#### 📋 Jak to działa?")
     
     st.markdown("""
-    **1.** Przeczytasz **20 tekstów** do analizy
+    **1.** Przeczytasz **20 tekstów** z fake newsami
     
-    **2.** Dla każdego tekstu ocenisz **sentyment** (pozytywny, negatywny, neutralny)
+    **2.** Dla każdego tekstu ocenisz natężenie **sentymentu** (pozytywny, negatywny, neutralny)
     
-    **3.** Następnie ocenisz **emocje** (radość, zaufanie, strach i inne)
+    **3.** Następnie ocenisz natężenie **emocji** (radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość)
     
-    **4.** Użyj prostej skali: **Brak/Niskie → Średnie → Wysokie**
+                 
+    Do określenia poziomu natężenia użyj prostej skali: **Brak/Niskie → Średnie → Wysokie**
     """)
     
     st.markdown("---")
@@ -436,21 +452,30 @@ def sentiment_coding_ui(text):
     # Scale options
     scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
     
-    # Create pills for each sentiment
+    # Create sliders for each sentiment
     for key, data in SENTIMENTS.items():
         # Get definition for tooltip
         definition = DEFINITIONS["sentiments"].get(key, "")
         
-        # Label with help icon
-        value = st.pills(
-            data['pl'],
+        # Label and description
+        st.markdown(f"""
+        <div class="rating-item">
+            <div class="rating-label">{data['pl']}</div>
+            <div class="rating-desc">{definition}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Slider
+        value = st.select_slider(
+            f"Natężenie - {data['pl']}",
             options=scale_options,
-            default="Brak",
+            value="Brak",
             key=f"sentiment_{key}",
-            help=definition if definition else None
+            label_visibility="collapsed"
         )
+        
         # Convert to numeric value (0-3)
-        sentiment_values[key] = scale_options.index(value) if value else 0
+        sentiment_values[key] = scale_options.index(value)
     
     st.markdown("")
     
@@ -490,26 +515,42 @@ def emotion_coding_ui(text):
     with col1:
         for key, data in emotions_list[:4]:
             definition = DEFINITIONS["emotions"].get(key, "")
-            value = st.pills(
-                f"{data['icon']} {data['pl']}",
+            
+            st.markdown(f"""
+            <div class="rating-item">
+                <div class="rating-label">{data['icon']} {data['pl']}</div>
+                <div class="rating-desc">{definition}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            value = st.select_slider(
+                f"{data['pl']}",
                 options=scale_options,
-                default="Brak",
+                value="Brak",
                 key=f"emotion_{key}",
-                help=definition if definition else None
+                label_visibility="collapsed"
             )
-            emotion_values[key] = scale_options.index(value) if value else 0
+            emotion_values[key] = scale_options.index(value)
     
     with col2:
         for key, data in emotions_list[4:]:
             definition = DEFINITIONS["emotions"].get(key, "")
-            value = st.pills(
-                f"{data['icon']} {data['pl']}",
+            
+            st.markdown(f"""
+            <div class="rating-item">
+                <div class="rating-label">{data['icon']} {data['pl']}</div>
+                <div class="rating-desc">{definition}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            value = st.select_slider(
+                f"{data['pl']}",
                 options=scale_options,
-                default="Brak",
+                value="Brak",
                 key=f"emotion_{key}",
-                help=definition if definition else None
+                label_visibility="collapsed"
             )
-            emotion_values[key] = scale_options.index(value) if value else 0
+            emotion_values[key] = scale_options.index(value)
     
     st.markdown("")
     
