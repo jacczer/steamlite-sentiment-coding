@@ -7,8 +7,20 @@ import streamlit as st
 import json
 from pathlib import Path
 from datetime import datetime, timezone
+import re
 import gspread
 from google.oauth2.service_account import Credentials
+
+# ===== KONFIGURACJA SESJI KODOWANIA =====
+# Ustaw liczbę tekstów do zakodowania
+NUM_TEXTS_TO_CODE = 40
+
+# Ustaw zakres elementów do kodowania (numeracja od 0)
+# None = od początku, lub podaj numer startu (np. 150)
+START_INDEX = 150
+# None = do końca, lub podaj numer końca (np. 190)
+END_INDEX = 190
+# =========================================
 
 # Configuration
 DATA_FILE = Path(__file__).parent / "data_to_code.json"
@@ -79,42 +91,6 @@ CUSTOM_CSS = """
         font-size: 1.3rem;
     }
     
-    /* Coding container - integrated look */
-    .coding-container {
-        background: rgba(255,255,255,0.03);
-        border-radius: 15px;
-        padding: 0;
-        margin-bottom: 20px;
-        overflow: hidden;
-    }
-    
-    .coding-container .section-header {
-        margin: 0;
-        border-radius: 15px 15px 0 0;
-    }
-    
-    .text-card-integrated {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        padding: 20px 25px;
-        margin: 0;
-        border-radius: 0 0 15px 15px;
-    }
-    
-    .text-card-integrated p {
-        font-size: 16px;
-        line-height: 1.7;
-        color: #e0e0e0;
-        margin: 0;
-    }
-    
-    /* Progress styling */
-    .progress-container {
-        background: rgba(255,255,255,0.1);
-        border-radius: 20px;
-        padding: 3px;
-        margin-bottom: 10px;
-    }
-    
     /* Welcome card */
     .welcome-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -129,72 +105,9 @@ CUSTOM_CSS = """
         margin-bottom: 10px;
     }
     
-    /* Instruction box */
-    .instruction-box {
-        background: rgba(255,255,255,0.05);
-        border-radius: 15px;
-        padding: 25px;
-        margin: 20px 0;
-    }
-    
-    .instruction-item {
-        display: flex;
-        align-items: flex-start;
-        margin: 15px 0;
-    }
-    
-    .instruction-number {
-        background: #667eea;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        margin-right: 15px;
-        flex-shrink: 0;
-    }
-    
     /* Hide default widget labels */
     [data-testid="stWidgetLabel"] {
         display: none !important;
-    }
-    
-    /* Global spacing reduction for compact look */
-    .stElementContainer {
-        margin-bottom: 0px;
-    }
-    
-    /* Rating item styling - Top part of the card */
-    .rating-item, .rating-card {
-        padding: 8px 12px 8px 12px;
-        border-radius: 8px;
-        margin-top: 2px;
-        margin-bottom: 0px;
-    }
-    
-    .rating-label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #ffffff;
-        margin-bottom: 1px;
-    }
-    
-    .rating-desc {
-        font-size: 0.7rem;
-        color: #c0c0c0;
-        margin-bottom: 0px;
-        font-style: italic;
-        line-height: 1.15;
-    }
-    
-    /* Slider container - standard Streamlit styling with top margin */
-    .stSlider {
-        padding-top: 8px !important;
-        margin-bottom: 0px !important;
-        background: transparent !important;
     }
     
     /* Success message styling */
@@ -213,31 +126,89 @@ CUSTOM_CSS = """
         padding: 10px 15px;
     }
     
-    /* Button styling */
-    .stButton > button {
-        border-radius: 25px;
-        padding: 12px 30px;
-        font-weight: 600;
-        transition: all 0.3s ease;
+    /* Rating box - container for each category */
+    .rating-box {
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 4px;
     }
     
-    .stButton > button:hover {
+    .rating-label-container {
+        flex: 1;
+    }
+    
+    .rating-label {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 2px;
+    }
+    
+    .rating-desc {
+        font-size: 0.65rem;
+        color: #c0c0c0;
+        font-style: italic;
+        line-height: 1.3;
+    }
+    
+    /* Smaller spacing between elements */
+    div[data-testid="stVerticalBlock"] > div {
+        margin-bottom: 0px !important;
+        padding-bottom: 0px !important;
+    }
+    
+    /* Rating buttons - secondary (not selected) */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        background: rgba(40, 40, 50, 0.9) !important;
+        border: 2px solid rgba(255,255,255,0.2) !important;
+        border-radius: 8px !important;
+        padding: 4px 8px !important;
+        font-size: 0.55rem !important;
+        color: #d0d0d0 !important;
+        font-weight: 500 !important;
+        min-height: 36px !important;
+    }
+    
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        background: rgba(60, 60, 70, 0.9) !important;
+        border-color: rgba(255,255,255,0.4) !important;
+    }
+    
+    /* Rating buttons - primary (selected) - red border */
+    div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+        background: rgba(40, 40, 50, 0.95) !important;
+        border: 2px solid #e74c3c !important;
+        border-radius: 8px !important;
+        padding: 4px 8px !important;
+        font-size: 0.55rem !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        min-height: 36px !important;
+    }
+    
+    /* Main action buttons (DALEJ, ZAPISZ, etc.) - keep original styling */
+    .stButton > button[kind="primary"] {
+        border-radius: 25px !important;
+        padding: 12px 30px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+        font-size: 1rem !important;
+        min-height: auto !important;
+    }
+    
+    .stButton > button[kind="primary"]:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
     }
     
-    /* Dynamic thumb colors based on position */
-    .slider-brak [data-baseweb="slider"] [role="slider"] {
-        background: #4CAF50 !important;
-    }
-    .slider-niskie [data-baseweb="slider"] [role="slider"] {
-        background: #8BC34A !important;
-    }
-    .slider-srednie [data-baseweb="slider"] [role="slider"] {
-        background: #FF9800 !important;
-    }
-    .slider-wysokie [data-baseweb="slider"] [role="slider"] {
-        background: #f44336 !important;
+    .stButton > button[kind="secondary"] {
+        border-radius: 25px !important;
+        padding: 12px 30px !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        min-height: auto !important;
     }
 </style>
 """
@@ -340,11 +311,125 @@ EMOTIONS = {
 
 # Color mapping for slider thumb based on value
 SLIDER_COLORS = {
-    "Brak": "#4CAF50",      # Green
-    "Niskie": "#8BC34A",    # Light green
-    "Średnie": "#FF9800",   # Orange
-    "Wysokie": "#f44336"    # Red
+    "Brak": "#4CAF50",                           # Green
+    "Obecna": "#FF9800",         # Orange
+    "Silna / Dominująca": "#f44336"              # Red
 }
+
+RGBA_PATTERN = re.compile(r"rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)")
+
+
+def adjust_rgba_alpha(color: str, alpha: float) -> str:
+    """Return rgba color with adjusted alpha (falls back to original on parse failure)."""
+    match = RGBA_PATTERN.match(color.strip())
+    if not match:
+        return color
+    r, g, b, _ = match.groups()
+    alpha = max(0.0, min(alpha, 1.0))
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+def render_scale_row(row_key: str,
+                     data: dict,
+                     definition: str,
+                     state_prefix: str,
+                     scale_options,
+                     scale_mapping,
+                     layout=(2.4, 1.6),
+                     buttons_below=False,
+                     desc_max_width="100%",
+                     button_font_size="0.55rem",
+                     button_padding="4px 8px") -> str:
+    """Render a single labeled scale row and return selected label."""
+    state_key = f"{state_prefix}_val_{row_key}"
+    if state_key not in st.session_state:
+        st.session_state[state_key] = scale_options[0]
+    bg_color = data.get('bg', 'rgba(255,255,255,0.08)')
+    border_color = data.get('border', '#667eea')
+    button_bg = adjust_rgba_alpha(bg_color, 0.45)
+    button_bg_selected = adjust_rgba_alpha(bg_color, 0.8)
+    marker_class = f"{state_prefix}-marker-{row_key}"
+    label_text = data.get('pl', row_key.title())
+    icon = data.get('icon')
+    label_display = f"{icon} {label_text}" if icon and icon not in label_text else label_text
+
+    with st.container():
+        st.markdown(f"""
+        <style>
+        div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) {{
+            background: {bg_color} !important;
+
+            border-radius: 12px !important;
+            padding: 12px 16px !important;
+            margin-bottom: -5px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        }}
+        div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) > div {{
+            background: transparent !important;
+        }}
+        div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) button[kind="secondary"],
+        div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) button[kind="primary"] {{
+            background: {button_bg} !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            font-size: {button_font_size} !important;
+            padding: {button_padding} !important;
+            min-height: 38px !important;
+        }}
+        div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) button[kind="secondary"] {{
+            border: 2px solid rgba(255,255,255,0.25) !important;
+        }}
+        div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) button[kind="primary"] {{
+            background: {button_bg_selected} !important;
+            border: 3px solid #FFFFFF !important;
+            font-weight: 600 !important;
+        }}
+        </style>
+        <div class="{marker_class}"></div>
+        """, unsafe_allow_html=True)
+
+        if buttons_below:
+            st.markdown(f"""
+            <div style="padding-right: 8px; margin-bottom: 12px; margin-top: -18px">
+                <div style="font-size: 0.95rem; font-weight: 600; color: #ffffff;">
+                    {label_display}
+                </div>
+                <div style="font-size: 0.62rem; color: #d0d0d0; font-style: italic; line-height: 1.3; max-width: {desc_max_width};">
+                    {definition}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            btn_cols = st.columns(len(scale_options))
+        else:
+            col_label, col_buttons = st.columns(layout)
+            with col_label:
+                st.markdown(f"""
+                <div style="padding-right: 12px; max-width: {desc_max_width}; margin-top: -18px;">
+                    <div style="font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 3px;">
+                        {label_display}
+                    </div>
+                    <div style="font-size: 0.62rem; color: #d0d0d0; font-style: italic; line-height: 1.3;">
+                        {definition}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_buttons:
+                btn_cols = st.columns(len(scale_options))
+
+        for option, btn_col in zip(scale_options, btn_cols):
+            with btn_col:
+                is_selected = (st.session_state[state_key] == option)
+                btn_type = "primary" if is_selected else "secondary"
+                if st.button(
+                    option,
+                    key=f"{state_prefix}_btn_{row_key}_{option}",
+                    type=btn_type,
+                    use_container_width=True
+                ):
+                    st.session_state[state_key] = option
+                    st.rerun()
+
+    return st.session_state[state_key]
 
 
 def load_data():
@@ -362,7 +447,12 @@ def initialize_session():
     if 'current_index' not in st.session_state:
         st.session_state.current_index = 0
     if 'session_elements' not in st.session_state:
-        st.session_state.session_elements = st.session_state.data[:20]
+        # Zastosuj zakres i liczbę tekstów z konfiguracji
+        all_data = st.session_state.data
+        start = START_INDEX if START_INDEX is not None else 0
+        end = END_INDEX if END_INDEX is not None else len(all_data)
+        selected_data = all_data[start:end]
+        st.session_state.session_elements = selected_data[:NUM_TEXTS_TO_CODE]
     if 'coding_stage' not in st.session_state:
         st.session_state.coding_stage = 'sentiment'
     if 'results' not in st.session_state:
@@ -390,15 +480,15 @@ def start_screen():
     # Instructions using native Streamlit
     st.markdown("#### 📋 Jak to działa?")
     
-    st.markdown("""
-    **1.** Przeczytasz **20 tekstów** z fake newsami
+    st.markdown(f"""
+    **1.** Przeczytasz **{len(st.session_state.session_elements)} tekstów** z fake newsami
     
     **2.** Dla każdego tekstu ocenisz natężenie **sentymentu** (pozytywny, negatywny, neutralny)
     
     **3.** Następnie ocenisz natężenie **emocji** (radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość)
     
                  
-    Do określenia poziomu natężenia użyj prostej skali: **Brak/Niskie → Średnie → Wysokie**
+    Do określenia poziomu natężenia użyj prostej skali: **Brak → Obecna (nawet śladowo) → Silna / Dominująca**
     """)
     
     st.markdown("---")
@@ -432,9 +522,10 @@ def coding_screen():
     
     current_element = st.session_state.session_elements[st.session_state.current_index]
     progress = st.session_state.current_index + 1
+    total_texts = len(st.session_state.session_elements)
     
     # Modern compact progress header
-    progress_percent = int((progress / 20) * 100)
+    progress_percent = int((progress / total_texts) * 100)
     st.markdown(f"""
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; margin-bottom: 10px;">
         <div style="flex: 1; margin-right: 15px;">
@@ -444,7 +535,7 @@ def coding_screen():
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 1.2rem; font-weight: 700; color: #667eea;">{progress}</span>
-            <span style="font-size: 0.85rem; color: #888;">/ 20 tekstów</span>
+            <span style="font-size: 0.85rem; color: #888;">/ {total_texts} tekstów</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -471,7 +562,7 @@ def sentiment_coding_ui(text):
     
     # Text to analyze
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #667eea; margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #667eea; border-right: 4px solid #667eea; margin-bottom: 15px;">
         <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">📝 Tekst do oceny</div>
         <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
     </div>
@@ -480,44 +571,36 @@ def sentiment_coding_ui(text):
     # Instruction
     st.markdown("""
     <div style="font-size: 0.8rem; color: #b0b0b0; margin-bottom: 10px;">
-        ↓ Dla każdego sentymentu wybierz poziom natężenia (Brak → Wysokie)
+        ↓ Dla każdego sentymentu wybierz poziom natężenia
     </div>
     """, unsafe_allow_html=True)
     
     sentiment_values = {}
-    slider_values_for_css = {}
     
-    # Scale options
-    scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
+    # Scale options (3-level)
+    scale_options = ["Brak", "Obecna", "Silna"]
+    scale_mapping = {"Brak": 0, "Obecna": 1, "Silna": 2}
     
-    # Create sliders for each sentiment
-    for idx, (key, data) in enumerate(SENTIMENTS.items()):
-        # Get definition for tooltip
+    # Initialize session state for sentiment buttons if needed
+    for key in SENTIMENTS.keys():
+        if f"sent_val_{key}" not in st.session_state:
+            st.session_state[f"sent_val_{key}"] = "Brak"
+    
+    # Create compact rows for each sentiment
+    for key, data in SENTIMENTS.items():
         definition = DEFINITIONS["sentiments"].get(key, "")
-        bg_color = data.get('bg', 'rgba(255,255,255,0.05)')
-        border_color = data.get('border', '#667eea')
-        
-        # Full card with label, description and slider background
-        st.markdown(f"""
-        <div class="rating-card" style="background: {bg_color}; border-left: 3px solid {border_color}; border-radius: 8px; padding: 8px 12px; margin-top: 6px;">
-            <div class="rating-label">{data['pl']}</div>
-            <div class="rating-desc">{definition}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Slider
-        value = st.select_slider(
-            f"Natężenie - {data['pl']}",
-            options=scale_options,
-            value="Brak",
-            key=f"sentiment_{key}",
-            label_visibility="collapsed"
+        selected_label = render_scale_row(
+            row_key=key,
+            data=data,
+            definition=definition,
+            state_prefix="sent",
+            scale_options=scale_options,
+            scale_mapping=scale_mapping,
+            layout=(2.0, 2.0),
+            desc_max_width="100%",
+            button_font_size="0.55rem"
         )
-        
-        slider_values_for_css[f"sentiment_{key}"] = (value, bg_color)
-        
-        # Convert to numeric value (0-3)
-        sentiment_values[key] = scale_options.index(value)
+        sentiment_values[key] = scale_mapping[selected_label]
     
     st.markdown("")
     
@@ -545,7 +628,7 @@ def emotion_coding_ui(text):
     
     # Text to analyze
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #764ba2; margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #764ba2; border-right: 4px solid #764ba2; margin-bottom: 15px;">
         <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">📝 Tekst do oceny</div>
         <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
     </div>
@@ -554,66 +637,45 @@ def emotion_coding_ui(text):
     # Instruction
     st.markdown("""
     <div style="font-size: 0.8rem; color: #b0b0b0; margin-bottom: 10px;">
-        ↓ Dla każdej emocji wybierz poziom natężenia (Brak → Wysokie)
+        ↓ Dla każdej emocji wybierz poziom natężenia
     </div>
     """, unsafe_allow_html=True)
     
     emotion_values = {}
-    slider_values_for_css = {}
     
-    # Scale options
-    scale_options = ["Brak", "Niskie", "Średnie", "Wysokie"]
+    # Scale options (3-level)
+    scale_options = ["Brak", "Obecna", "Silna"]
+    scale_mapping = {"Brak": 0, "Obecna": 1, "Silna": 2}
     
-    # Create two columns for emotions
-    col1, col2 = st.columns(2)
+    # Initialize session state for emotion buttons if needed
+    for key in EMOTIONS.keys():
+        if f"emo_val_{key}" not in st.session_state:
+            st.session_state[f"emo_val_{key}"] = "Brak"
     
     emotions_list = list(EMOTIONS.items())
     
-    with col1:
-        for idx, (key, data) in enumerate(emotions_list[:4]):
+    # Display emotions in two columns
+    for idx in range(0, len(emotions_list), 2):
+        row_cols = st.columns(2)
+        for offset in range(2):
+            if idx + offset >= len(emotions_list):
+                continue
+            key, data = emotions_list[idx + offset]
             definition = DEFINITIONS["emotions"].get(key, "")
-            bg_color = data.get('bg', 'rgba(255,255,255,0.05)')
-            border_color = data.get('border', '#667eea')
-            
-            st.markdown(f"""
-            <div class="rating-card" style="background: {bg_color}; border-left: 3px solid {border_color}; border-radius: 8px; padding: 8px 12px; margin-top: 6px;">
-                <div class="rating-label">{data['icon']} {data['pl']}</div>
-                <div class="rating-desc">{definition}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            value = st.select_slider(
-                f"{data['pl']}",
-                options=scale_options,
-                value="Brak",
-                key=f"emotion_{key}",
-                label_visibility="collapsed"
-            )
-            emotion_values[key] = scale_options.index(value)
-            slider_values_for_css[f"emotion_{key}_col1_{idx}"] = (value, bg_color)
-    
-    with col2:
-        for idx, (key, data) in enumerate(emotions_list[4:]):
-            definition = DEFINITIONS["emotions"].get(key, "")
-            bg_color = data.get('bg', 'rgba(255,255,255,0.05)')
-            border_color = data.get('border', '#667eea')
-            
-            st.markdown(f"""
-            <div class="rating-card" style="background: {bg_color}; border-left: 3px solid {border_color}; border-radius: 8px; padding: 8px 12px; margin-top: 6px;">
-                <div class="rating-label">{data['icon']} {data['pl']}</div>
-                <div class="rating-desc">{definition}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            value = st.select_slider(
-                f"{data['pl']}",
-                options=scale_options,
-                value="Brak",
-                key=f"emotion_{key}",
-                label_visibility="collapsed"
-            )
-            emotion_values[key] = scale_options.index(value)
-            slider_values_for_css[f"emotion_{key}_col2_{idx}"] = (value, bg_color)
+            with row_cols[offset]:
+                selected_label = render_scale_row(
+                    row_key=key,
+                    data=data,
+                    definition=definition,
+                    state_prefix="emo",
+                    scale_options=scale_options,
+                    scale_mapping=scale_mapping,
+                    buttons_below=True,
+                    desc_max_width="320px",
+                    button_font_size="calc(0.7rem - 2px)",
+                    button_padding="4px 8px"
+                )
+                emotion_values[key] = scale_mapping[selected_label]
     
     st.markdown("")
     
@@ -651,12 +713,17 @@ def emotion_coding_ui(text):
             }
             st.session_state.results.append(result)
             
-            # Reset for next element
+            # Reset for next element - clear all button states
+            for skey in SENTIMENTS.keys():
+                st.session_state[f"sent_val_{skey}"] = "Brak"
+            for ekey in EMOTIONS.keys():
+                st.session_state[f"emo_val_{ekey}"] = "Brak"
+            
             st.session_state.current_coding = {'sentiment': {}, 'emotion': {}}
             st.session_state.coding_stage = 'sentiment'
             st.session_state.current_index += 1
             
-            if st.session_state.current_index >= 20:
+            if st.session_state.current_index >= len(st.session_state.session_elements):
                 save_results()
                 st.session_state.screen = 'end'
             
@@ -688,11 +755,12 @@ def end_screen():
     """, unsafe_allow_html=True)
     
     # Summary
+    total_coded = len(st.session_state.results)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("""
+        st.markdown(f"""
         <div style="text-align: center; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 15px;">
-            <h2 style="color: #4CAF50; margin-bottom: 10px;">20</h2>
+            <h2 style="color: #4CAF50; margin-bottom: 10px;">{total_coded}</h2>
             <p style="color: #b0b0b0;">zakodowanych tekstów</p>
         </div>
         """, unsafe_allow_html=True)
