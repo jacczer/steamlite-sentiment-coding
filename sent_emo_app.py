@@ -17,9 +17,9 @@ NUM_TEXTS_TO_CODE = 40
 
 # Ustaw zakres elementów do kodowania (numeracja od 0)
 # None = od początku, lub podaj numer startu (np. 150)
-START_INDEX = 150
-# None = do końca, lub podaj numer końca (np. 190)
-END_INDEX = 190
+START_INDEX = 200
+# None = do końca, lub podaj numer końca (np. 240)
+END_INDEX = 240
 # =========================================
 
 # Configuration
@@ -61,10 +61,10 @@ CUSTOM_CSS = """
     
     /* Text card styling */
     .text-card {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
         padding: 25px 30px;
         border-radius: 15px;
-        border-left: 5px solid #4CAF50;
+        border-left: 5px solid #5d6d7e;
         margin: 20px 0;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
@@ -93,7 +93,7 @@ CUSTOM_CSS = """
     
     /* Welcome card */
     .welcome-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
         padding: 30px;
         border-radius: 20px;
         text-align: center;
@@ -112,7 +112,7 @@ CUSTOM_CSS = """
     
     /* Success message styling */
     .success-banner {
-        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        background: linear-gradient(135deg, #5d7e69 0%, #4a6358 100%);
         padding: 40px;
         border-radius: 20px;
         text-align: center;
@@ -122,7 +122,7 @@ CUSTOM_CSS = """
     /* Input field styling */
     .stTextInput > div > div > input {
         border-radius: 10px;
-        border: 2px solid #667eea;
+        border: 2px solid #5d6d7e;
         padding: 10px 15px;
     }
     
@@ -157,8 +157,8 @@ CUSTOM_CSS = """
         padding-bottom: 0px !important;
     }
     
-    /* Rating buttons - secondary (not selected) */
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+    /* Rating buttons - secondary (not selected) - nested columns */
+    div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background: rgba(40, 40, 50, 0.9) !important;
         border: 2px solid rgba(255,255,255,0.2) !important;
         border-radius: 8px !important;
@@ -169,15 +169,15 @@ CUSTOM_CSS = """
         min-height: 36px !important;
     }
     
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+    div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
         background: rgba(60, 60, 70, 0.9) !important;
         border-color: rgba(255,255,255,0.4) !important;
     }
     
-    /* Rating buttons - primary (selected) - red border */
-    div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+    /* Rating buttons - primary (selected) - stonowany niebieski border */
+    div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"] button[kind="primary"] {
         background: rgba(40, 40, 50, 0.95) !important;
-        border: 2px solid #e74c3c !important;
+        border: 2px solid #5d6d7e !important;
         border-radius: 8px !important;
         padding: 4px 8px !important;
         font-size: 0.55rem !important;
@@ -186,21 +186,24 @@ CUSTOM_CSS = """
         min-height: 36px !important;
     }
     
-    /* Main action buttons (DALEJ, ZAPISZ, etc.) - keep original styling */
+    /* Main action buttons (DALEJ, ZAPISZ, etc.) */
     .stButton > button[kind="primary"] {
         border-radius: 25px !important;
         padding: 12px 30px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        border: none !important;
+        background: linear-gradient(135deg, #5d6d7e 0%, #34495e 100%) !important;
+        border: 2px solid #c85a54 !important;
         font-size: 1rem !important;
         min-height: auto !important;
+        box-shadow: none !important;
+        color: white !important;
     }
     
     .stButton > button[kind="primary"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 5px 20px rgba(200, 90, 84, 0.5) !important;
+        border-color: #d67771 !important;
     }
     
     .stButton > button[kind="secondary"] {
@@ -209,6 +212,16 @@ CUSTOM_CSS = """
         font-weight: 600 !important;
         font-size: 1rem !important;
         min-height: auto !important;
+        border: 2px solid #c85a54 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: none !important;
+        color: #d0d0d0 !important;
+    }
+    
+    .stButton > button[kind="secondary"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(200, 90, 84, 0.4) !important;
+        border-color: #d67771 !important;
     }
 </style>
 """
@@ -293,20 +306,20 @@ def save_to_google_sheets(oid, text, sentiment_values, emotion_values, coder_id=
 
 # Categories configuration with unique subtle background colors
 SENTIMENTS = {
-    "positive": {"pl": "😊 Pozytywny", "icon": "😊", "bg": "rgba(76, 175, 80, 0.15)", "border": "#4CAF50"},
-    "negative": {"pl": "😢 Negatywny", "icon": "😢", "bg": "rgba(244, 67, 54, 0.15)", "border": "#f44336"},
-    "neutral": {"pl": "😐 Neutralny", "icon": "😐", "bg": "rgba(158, 158, 158, 0.15)", "border": "#9E9E9E"}
+    "positive": {"pl": "😊 Pozytywny", "icon": "😊", "bg": "rgba(76, 140, 80, 0.08)", "border": "#4a7a4d"},
+    "negative": {"pl": "😢 Negatywny", "icon": "😢", "bg": "rgba(180, 67, 60, 0.08)", "border": "#8a4a46"},
+    "neutral": {"pl": "😐 Neutralny", "icon": "😐", "bg": "rgba(120, 120, 120, 0.08)", "border": "#6a6a6a"}
 }
 
 EMOTIONS = {
-    "joy": {"pl": "Radość", "icon": "😄", "bg": "rgba(255, 235, 59, 0.12)", "border": "#FFEB3B"},
-    "trust": {"pl": "Zaufanie", "icon": "🤝", "bg": "rgba(76, 175, 80, 0.12)", "border": "#4CAF50"},
-    "anticipation": {"pl": "Oczekiwanie", "icon": "🔮", "bg": "rgba(156, 39, 176, 0.12)", "border": "#9C27B0"},
-    "surprise": {"pl": "Zaskoczenie", "icon": "😲", "bg": "rgba(255, 152, 0, 0.12)", "border": "#FF9800"},
-    "fear": {"pl": "Strach", "icon": "😨", "bg": "rgba(33, 150, 243, 0.12)", "border": "#2196F3"},
-    "sadness": {"pl": "Smutek", "icon": "😢", "bg": "rgba(63, 81, 181, 0.12)", "border": "#3F51B5"},
-    "disgust": {"pl": "Wstręt", "icon": "🤢", "bg": "rgba(139, 195, 74, 0.12)", "border": "#8BC34A"},
-    "anger": {"pl": "Złość", "icon": "😠", "bg": "rgba(244, 67, 54, 0.12)", "border": "#f44336"}
+    "joy": {"pl": "Radość", "icon": "😄", "bg": "rgba(190, 180, 80, 0.07)", "border": "#a09a5a"},
+    "trust": {"pl": "Zaufanie", "icon": "🤝", "bg": "rgba(76, 140, 80, 0.07)", "border": "#4a7a4d"},
+    "anticipation": {"pl": "Oczekiwanie", "icon": "🔮", "bg": "rgba(120, 60, 130, 0.07)", "border": "#6a4a70"},
+    "surprise": {"pl": "Zaskoczenie", "icon": "😲", "bg": "rgba(180, 120, 60, 0.07)", "border": "#9a7a50"},
+    "fear": {"pl": "Strach", "icon": "😨", "bg": "rgba(60, 110, 160, 0.07)", "border": "#4a6a8a"},
+    "sadness": {"pl": "Smutek", "icon": "😢", "bg": "rgba(70, 80, 130, 0.07)", "border": "#4a5575"},
+    "disgust": {"pl": "Wstręt", "icon": "🤢", "bg": "rgba(110, 140, 80, 0.07)", "border": "#5a7a4a"},
+    "anger": {"pl": "Złość", "icon": "😠", "bg": "rgba(180, 67, 60, 0.07)", "border": "#8a4a46"}
 }
 
 # Color mapping for slider thumb based on value
@@ -360,7 +373,7 @@ def render_scale_row(row_key: str,
             background: {bg_color} !important;
 
             border-radius: 12px !important;
-            padding: 12px 16px !important;
+            padding: 16px 18px !important;
             margin-bottom: -5px !important;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         }}
@@ -390,11 +403,11 @@ def render_scale_row(row_key: str,
 
         if buttons_below:
             st.markdown(f"""
-            <div style="padding-right: 8px; margin-bottom: 12px; margin-top: -18px">
-                <div style="font-size: 0.95rem; font-weight: 600; color: #ffffff;">
+            <div style="padding-right: 8px; margin-bottom: 14px; margin-top: -18px">
+                <div style="font-size: 1.05rem; font-weight: 600; color: #ffffff; margin-bottom: 4px;">
                     {label_display}
                 </div>
-                <div style="font-size: 0.62rem; color: #d0d0d0; font-style: italic; line-height: 1.3; max-width: {desc_max_width};">
+                <div style="font-size: 0.75rem; color: #d0d0d0; font-style: italic; line-height: 1.4; max-width: {desc_max_width};">
                     {definition}
                 </div>
             </div>
@@ -405,10 +418,10 @@ def render_scale_row(row_key: str,
             with col_label:
                 st.markdown(f"""
                 <div style="padding-right: 12px; max-width: {desc_max_width}; margin-top: -18px;">
-                    <div style="font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 3px;">
+                    <div style="font-size: 1.05rem; font-weight: 600; color: #ffffff; margin-bottom: 4px;">
                         {label_display}
                     </div>
-                    <div style="font-size: 0.62rem; color: #d0d0d0; font-style: italic; line-height: 1.3;">
+                    <div style="font-size: 0.75rem; color: #d0d0d0; font-style: italic; line-height: 1.4;">
                         {definition}
                     </div>
                 </div>
@@ -467,42 +480,80 @@ def start_screen():
     """Display start screen."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
-    # Welcome header
+    # Welcome header - compact
     st.markdown("""
-    <div class="welcome-card">
-        <h1>Kodowanie sentymentu i emocji w fake newsach</h1>
-        <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">
-            Narzędzie do manualnej analizy tekstów
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 18px 25px; border-radius: 12px; text-align: center; margin: 10px 0 15px 0;">
+        <h2 style="color: white; margin: 0; font-size: 1.4rem;">Oceń sentyment i emocje w fake newsach</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Instructions
+    st.markdown(f"""
+    <div style="font-size: 0.88rem; color: #d0d0d0; margin-bottom: 10px;">
+    Twoim zadaniem jest ocena <strong>{len(st.session_state.session_elements)} tekstów</strong> pod kątem obecności sentymentu i emocji. Proces kodowania składa się z dwóch kroków:
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Step 1 - Sentiment
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 12px 16px; border-radius: 8px; border-left: 3px solid #5d6d7e; border-right: 3px solid #5d6d7e; margin: 8px 0;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+            <div style="background: #5d6d7e; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;">1</div>
+            <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">Sentyment</div>
+        </div>
+        <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0 0 0 32px;">
+            Oceń natężenie trzech rodzajów sentymentu: : pozytywny, negatywny, neutralny
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Instructions using native Streamlit
-    st.markdown("#### 📋 Jak to działa?")
+    # Step 2 - Emotions
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 12px 16px; border-radius: 8px; border-left: 3px solid #34495e; border-right: 3px solid #34495e; margin: 8px 0;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+            <div style="background: #34495e; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;">2</div>
+            <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">Emocje</div>
+        </div>
+        <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0 0 0 32px;">
+            Oceń natężenie ośmiu emocji: radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown(f"""
-    **1.** Przeczytasz **{len(st.session_state.session_elements)} tekstów** z fake newsami
-    
-    **2.** Dla każdego tekstu ocenisz natężenie **sentymentu** (pozytywny, negatywny, neutralny)
-    
-    **3.** Następnie ocenisz natężenie **emocji** (radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość)
-    
-                 
-    Do określenia poziomu natężenia użyj prostej skali: **Brak → Obecna (nawet śladowo) → Silna / Dominująca**
-    """)
-    
-    st.markdown("---")
+    # Scale explanation - compact
+    st.markdown("""
+    <div style="background: rgba(200, 90, 84, 0.1); padding: 12px 16px; border-radius: 8px; border: 2px solid #c85a54; margin: 12px 0 10px 0;">
+        <div style="font-size: 0.82rem; font-weight: 600; color: #e8e8e8; margin-bottom: 8px;">📊 Skala oceny:</div>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="background: rgba(40, 40, 50, 0.9); border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 4px 10px; font-size: 0.7rem; color: #d0d0d0; font-weight: 500; min-width: 70px; text-align: center;">Brak</div>
+                <span style="font-size: 0.78rem; color: #b8b8b8;">— całkowita nieobecność</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="background: rgba(40, 40, 50, 0.9); border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 4px 10px; font-size: 0.7rem; color: #d0d0d0; font-weight: 500; min-width: 70px; text-align: center;">Obecna</div>
+                <span style="font-size: 0.78rem; color: #b8b8b8;">— obecna, <strong>nawet śladowo</strong></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="background: rgba(40, 40, 50, 0.9); border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 4px 10px; font-size: 0.7rem; color: #d0d0d0; font-weight: 500; min-width: 70px; text-align: center;">Silna</div>
+                <span style="font-size: 0.78rem; color: #b8b8b8;">— wyraźnie dominująca</span>
+            </div>
+        </div>
+        <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 5px;">
+            <p style="font-size: 0.75rem; line-height: 1.4; color: #f4a582; margin: 0; font-weight: 500;">
+                *Zaznacz "Obecna" nawet przy subtelnej obecności. "Brak" = całkowity brak.
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Coder ID input
-    st.markdown("#### 👤 Twój identyfikator")
+    st.markdown('<div style="font-size: 0.82rem; font-weight: 600; color: #d0d0d0; margin: 12px 0 6px 0;">👤 Twój identyfikator:</div>', unsafe_allow_html=True)
     coder_id = st.text_input(
         "Identyfikator",
-        placeholder="Wpisz swoje inicjały (np. JK, AM)",
+        placeholder="np. JK, AM, K01",
         max_chars=20,
         label_visibility="collapsed"
     )
-    
-    st.markdown("")
     
     # Start button
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -530,11 +581,11 @@ def coding_screen():
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; margin-bottom: 10px;">
         <div style="flex: 1; margin-right: 15px;">
             <div style="background: rgba(255,255,255,0.1); border-radius: 10px; height: 8px; overflow: hidden;">
-                <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: {progress_percent}%; border-radius: 10px; transition: width 0.3s ease;"></div>
+                <div style="background: linear-gradient(90deg, #5d6d7e 0%, #34495e 100%); height: 100%; width: {progress_percent}%; border-radius: 10px; transition: width 0.3s ease;"></div>
             </div>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 1.2rem; font-weight: 700; color: #667eea;">{progress}</span>
+            <span style="font-size: 1.2rem; font-weight: 700; color: #5d6d7e;">{progress}</span>
             <span style="font-size: 0.85rem; color: #888;">/ {total_texts} tekstów</span>
         </div>
     </div>
@@ -552,7 +603,7 @@ def sentiment_coding_ui(text):
     # Step indicator
     st.markdown("""
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-        <div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">1</div>
+        <div style="background: #5d6d7e; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">1</div>
         <div>
             <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px;">Krok 1 z 2</div>
             <div style="font-size: 1.1rem; font-weight: 600; color: #fff;">Sentyment</div>
@@ -562,9 +613,9 @@ def sentiment_coding_ui(text):
     
     # Text to analyze
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #667eea; border-right: 4px solid #667eea; margin-bottom: 15px;">
-        <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">📝 Tekst do oceny</div>
-        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #5d6d7e; border-right: 4px solid #5d6d7e; margin-bottom: 15px;">
+        <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;"> Tekst do oceny</div>
+        <p style="font-size: 1.05rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -618,7 +669,7 @@ def emotion_coding_ui(text):
     # Step indicator
     st.markdown("""
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-        <div style="background: #764ba2; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">2</div>
+        <div style="background: #34495e; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;">2</div>
         <div>
             <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px;">Krok 2 z 2</div>
             <div style="font-size: 1.1rem; font-weight: 600; color: #fff;">Emocje</div>
@@ -628,9 +679,9 @@ def emotion_coding_ui(text):
     
     # Text to analyze
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #764ba2; border-right: 4px solid #764ba2; margin-bottom: 15px;">
-        <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">📝 Tekst do oceny</div>
-        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 16px 20px; border-radius: 10px; border-left: 4px solid #34495e; border-right: 4px solid #34495e; margin-bottom: 15px;">
+        <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;"> Tekst do oceny</div>
+        <p style="font-size: 1.05rem; line-height: 1.6; color: #e0e0e0; margin: 0;">{text}</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -778,8 +829,8 @@ def end_screen():
 def main():
     """Main application logic."""
     st.set_page_config(
-        page_title="Kodowanie Sentymentu i Emocji",
-        page_icon="🎯",
+        page_title="Kodowanie sentymentu i emocji",
+        page_icon="📋",
         layout="centered"
     )
     

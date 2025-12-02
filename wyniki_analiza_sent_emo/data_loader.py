@@ -92,11 +92,13 @@ def load_manual_coding_data() -> Tuple[Optional[pd.DataFrame], Optional[str]]:
     - coder_id
     - oid (Object ID matching post_id in Parquet)
     - text
-    - positive, negative, neutral (0-3) -> renamed to sentiment_positive, sentiment_negative, sentiment_neutral
-    - joy, trust, anticipation, surprise, fear, sadness, disgust, anger (0-3) -> renamed to emotion_*
+    - positive, negative, neutral (0-2) -> renamed to sentiment_positive, sentiment_negative, sentiment_neutral
+    - joy, trust, anticipation, surprise, fear, sadness, disgust, anger (0-2) -> renamed to emotion_*
     
     Note: Columns are automatically renamed from short names (positive, joy) to prefixed names
     (sentiment_positive, emotion_joy) for consistency with the analysis code.
+    
+    Scale: 0 = absent, 1 = present (even trace), 2 = strong presence
       
     Returns:
         Tuple[Optional[pd.DataFrame], Optional[str]]: (dataframe, error_message)
@@ -208,46 +210,80 @@ def merge_datasets(
         return None, f"Błąd łączenia danych: {str(e)}"
 
 
-def get_sentiment_columns() -> Dict[str, List[str]]:
+def get_sentiment_columns(use_ordinal: bool = True) -> Dict[str, List[str]]:
     """
     Get column names for different sentiment coding sources.
+    
+    Args:
+        use_ordinal: If True, returns ordinal column names for automatic coding;
+                     if False, returns original continuous column names
     
     Returns:
         Dict with keys: 'sent_emo', 'sent_emo_llm', 'manual'
     """
-    return {
-        'sent_emo': [
-            'SENT_EMO_sentyment_positive',
-            'SENT_EMO_sentyment_negative',
-            'SENT_EMO_sentyment_neutral'
-        ],
-        'sent_emo_llm': [
-            'SENT_EMO_LLM_sentyment_positive',
-            'SENT_EMO_LLM_sentyment_negative',
-            'SENT_EMO_LLM_sentyment_neutral'
-        ],
-        'manual': [
-            'sentiment_positive',
-            'sentiment_negative',
-            'sentiment_neutral'
-        ]
-    }
+    if use_ordinal:
+        return {
+            'sent_emo': [
+                'SENT_EMO_sentyment_positive_ordinal',
+                'SENT_EMO_sentyment_negative_ordinal',
+                'SENT_EMO_sentyment_neutral_ordinal'
+            ],
+            'sent_emo_llm': [
+                'SENT_EMO_LLM_sentyment_positive_ordinal',
+                'SENT_EMO_LLM_sentyment_negative_ordinal',
+                'SENT_EMO_LLM_sentyment_neutral_ordinal'
+            ],
+            'manual': [
+                'sentiment_positive',
+                'sentiment_negative',
+                'sentiment_neutral'
+            ]
+        }
+    else:
+        return {
+            'sent_emo': [
+                'SENT_EMO_sentyment_positive',
+                'SENT_EMO_sentyment_negative',
+                'SENT_EMO_sentyment_neutral'
+            ],
+            'sent_emo_llm': [
+                'SENT_EMO_LLM_sentyment_positive',
+                'SENT_EMO_LLM_sentyment_negative',
+                'SENT_EMO_LLM_sentyment_neutral'
+            ],
+            'manual': [
+                'sentiment_positive',
+                'sentiment_negative',
+                'sentiment_neutral'
+            ]
+        }
 
 
-def get_emotion_columns() -> Dict[str, List[str]]:
+def get_emotion_columns(use_ordinal: bool = True) -> Dict[str, List[str]]:
     """
     Get column names for different emotion coding sources.
+    
+    Args:
+        use_ordinal: If True, returns ordinal column names for automatic coding;
+                     if False, returns original continuous column names
     
     Returns:
         Dict with keys: 'sent_emo', 'sent_emo_llm', 'manual'
     """
     emotions = ['joy', 'trust', 'anticipation', 'surprise', 'fear', 'sadness', 'disgust', 'anger']
     
-    return {
-        'sent_emo': [f'SENT_EMO_emocje_{e}' for e in emotions],
-        'sent_emo_llm': [f'SENT_EMO_LLM_emocje_{e}' for e in emotions],
-        'manual': [f'emotion_{e}' for e in emotions]
-    }
+    if use_ordinal:
+        return {
+            'sent_emo': [f'SENT_EMO_emocje_{e}_ordinal' for e in emotions],
+            'sent_emo_llm': [f'SENT_EMO_LLM_emocje_{e}_ordinal' for e in emotions],
+            'manual': [f'emotion_{e}' for e in emotions]
+        }
+    else:
+        return {
+            'sent_emo': [f'SENT_EMO_emocje_{e}' for e in emotions],
+            'sent_emo_llm': [f'SENT_EMO_LLM_emocje_{e}' for e in emotions],
+            'manual': [f'emotion_{e}' for e in emotions]
+        }
 
 
 def get_category_labels() -> Dict[str, Dict[str, str]]:
@@ -276,10 +312,40 @@ def get_category_labels() -> Dict[str, Dict[str, str]]:
     }
 
 
+def apply_thresholds(
+    values: pd.Series,
+    threshold_low: float,
+    threshold_high: float
+) -> pd.Series:
+    """
+    Convert continuous values (0-1) to 3-point ordinal scale (0-2) using thresholds.
+    
+    Args:
+        values: Series of continuous values (0-1)
+        threshold_low: Boundary between 0 (absent) and 1 (weak presence) 
+        threshold_high: Boundary between 1 (weak) and 2 (strong presence)
+        
+    Returns:
+        Series with values 0, 1, or 2
+        
+    Mapping:
+        0 (absent): values < threshold_low
+        1 (present): threshold_low <= values < threshold_high
+        2 (strong presence): values >= threshold_high
+    """
+    result = pd.Series(index=values.index, dtype=int)
+    result[values < threshold_low] = 0
+    result[(values >= threshold_low) & (values < threshold_high)] = 1
+    result[values >= threshold_high] = 2
+    return result
+
+
 def normalize_to_scale(
     values: pd.Series,
     source_type: str,
-    target_scale: str = '0-3'
+    target_scale: str = '0-2',
+    threshold_low: float = 0.33,
+    threshold_high: float = 0.67
 ) -> pd.Series:
     """
     Normalize values to a common scale for comparison.
@@ -287,32 +353,25 @@ def normalize_to_scale(
     Args:
         values: Series of values to normalize
         source_type: Type of source data ('sent_emo', 'sent_emo_llm', 'manual')
-        target_scale: Target scale ('0-3' or '0-1')
+        target_scale: Target scale ('0-2' or '0-1')
+        threshold_low: Lower threshold for SENT_EMO/SENT_EMO_LLM conversion (0->1 boundary)
+        threshold_high: Upper threshold for SENT_EMO/SENT_EMO_LLM conversion (1->2 boundary)
         
     Returns:
         Normalized Series
     """
     if source_type == 'manual':
-        # Manual is already 0-3
+        # Manual is already 0-2
         if target_scale == '0-1':
-            return values / 3.0
+            return values / 2.0
         return values
     
-    elif source_type == 'sent_emo':
-        # SENT_EMO is 0-1 (continuous)
-        if target_scale == '0-3':
-            # Map to discrete 0-3 scale
-            # 0-0.25 -> 0, 0.25-0.5 -> 1, 0.5-0.75 -> 2, 0.75-1.0 -> 3
-            return pd.cut(values, bins=[-0.001, 0.25, 0.5, 0.75, 1.0], labels=[0, 1, 2, 3]).astype(int)
+    elif source_type in ['sent_emo', 'sent_emo_llm']:
+        # Both SENT_EMO and SENT_EMO_LLM are 0-1 (continuous probability)
+        if target_scale == '0-2':
+            # Apply thresholds to convert to ordinal 0-2 scale
+            return apply_thresholds(values, threshold_low, threshold_high)
         return values
-    
-    elif source_type == 'sent_emo_llm':
-        # SENT_EMO_LLM is 0-0.95 with step 0.05
-        if target_scale == '0-3':
-            # Map proportionally to 0-3 scale
-            return (values / 0.95 * 3).round().astype(int)
-        else:  # 0-1
-            return values / 0.95
     
     return values
 
@@ -341,3 +400,233 @@ def get_category_labels() -> Dict[str, Dict[str, str]]:
             'anger': 'Złość'
         }
     }
+
+
+def aggregate_manual_coding(
+    manual_df: pd.DataFrame, 
+    method: str = 'majority',
+    selected_coders: Optional[List[str]] = None
+) -> pd.DataFrame:
+    """
+    Aggregate manual coding data when multiple coders coded the same item (oid).
+    
+    Args:
+        manual_df: DataFrame with manual coding, may have multiple rows per oid
+        method: Aggregation method:
+            - 'majority' (moda/mode): most frequent value, ties resolved by lower value
+            - 'mean': mean rounded to nearest integer
+            - 'median': median value
+        selected_coders: List of coder_ids to include. If None, all coders are used.
+        
+    Returns:
+        DataFrame with one row per oid, with aggregated values
+    """
+    if manual_df is None or len(manual_df) == 0:
+        return manual_df
+    
+    # Filter by selected coders if specified
+    if selected_coders is not None and len(selected_coders) > 0:
+        manual_df = manual_df[manual_df['coder_id'].isin(selected_coders)].copy()
+    
+    if len(manual_df) == 0:
+        return manual_df
+    
+    # Columns to aggregate (sentiment and emotion)
+    agg_cols = [
+        'sentiment_positive', 'sentiment_negative', 'sentiment_neutral',
+        'emotion_joy', 'emotion_trust', 'emotion_anticipation', 'emotion_surprise',
+        'emotion_fear', 'emotion_sadness', 'emotion_disgust', 'emotion_anger'
+    ]
+    
+    # Filter to only existing columns
+    agg_cols = [col for col in agg_cols if col in manual_df.columns]
+    
+    if not agg_cols:
+        return manual_df
+    
+    # Define aggregation functions based on method
+    if method == 'majority':
+        # Use mode (most frequent value) - good for ordinal data
+        # Ties are resolved by taking the lower value (more conservative)
+        def safe_mode(x):
+            mode_val = x.mode()
+            if len(mode_val) > 0:
+                # If multiple modes, take the minimum (conservative)
+                return min(mode_val)
+            return x.iloc[0]
+        
+        agg_func = safe_mode
+        
+    elif method == 'mean':
+        # Use mean rounded to nearest integer
+        def rounded_mean(x):
+            return int(round(x.mean()))
+        agg_func = rounded_mean
+        
+    else:  # method == 'median'
+        # Use median
+        def safe_median(x):
+            return int(round(x.median()))
+        agg_func = safe_median
+    
+    # Build aggregation dictionary
+    agg_dict = {col: agg_func for col in agg_cols}
+    
+    # Keep first text and timestamp
+    if 'text' in manual_df.columns:
+        agg_dict['text'] = 'first'
+    if 'timestamp' in manual_df.columns:
+        agg_dict['timestamp'] = 'first'
+    
+    # Perform aggregation
+    aggregated = manual_df.groupby('oid', as_index=False).agg(agg_dict)
+    
+    # Add coder count column
+    coder_counts = manual_df.groupby('oid')['coder_id'].nunique().reset_index()
+    coder_counts.columns = ['oid', 'coder_count']
+    aggregated = aggregated.merge(coder_counts, on='oid', how='left')
+    
+    # Add list of coders who coded each item
+    coder_list = manual_df.groupby('oid')['coder_id'].apply(lambda x: ','.join(sorted(x.unique()))).reset_index()
+    coder_list.columns = ['oid', 'coders']
+    aggregated = aggregated.merge(coder_list, on='oid', how='left')
+    
+    return aggregated
+
+
+def prepare_analysis_data(
+    parquet_df: pd.DataFrame,
+    manual_df: Optional[pd.DataFrame],
+    selected_sources: List[str],
+    aggregate_manual: bool = True,
+    selected_coders: Optional[List[str]] = None,
+    aggregation_method: str = 'majority'
+) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    """
+    Prepare data for analysis based on selected sources.
+    
+    This function dynamically creates the analysis dataset:
+    - If only automatic sources (SENT_EMO, SENT_EMO_LLM) are selected:
+      Returns ALL records from parquet
+    - If manual is also selected:
+      Returns only records with matching oid between parquet and manual
+      (optionally after aggregating multiple coders per oid)
+    
+    Args:
+        parquet_df: DataFrame with automatic coding (from Parquet)
+        manual_df: DataFrame with manual coding (from Google Sheets), can be None
+        selected_sources: List of selected sources ['sent_emo', 'sent_emo_llm', 'manual']
+        aggregate_manual: Whether to aggregate manual data (multiple coders -> one value)
+        selected_coders: List of coder_ids to include. If None, all coders are used.
+        aggregation_method: Method for aggregation ('majority', 'mean', 'median')
+        
+    Returns:
+        Tuple of (prepared DataFrame, stats dict with record counts)
+    """
+    stats = {
+        'parquet_total': len(parquet_df) if parquet_df is not None else 0,
+        'manual_total': len(manual_df) if manual_df is not None else 0,
+        'manual_unique_oid': 0,
+        'manual_coders_used': 0,
+        'analysis_records': 0,
+        'aggregation_method': aggregation_method if aggregate_manual else 'none'
+    }
+    
+    # Normalize source names
+    sources = [s.lower().replace('sent_emo_llm', 'sent_emo_llm').replace('sent_emo', 'sent_emo') for s in selected_sources]
+    
+    has_manual = 'manual' in sources and manual_df is not None and len(manual_df) > 0
+    
+    if not has_manual:
+        # Only automatic sources - use all parquet data
+        stats['analysis_records'] = len(parquet_df)
+        return parquet_df.copy(), stats
+    
+    # Filter manual data by selected coders
+    filtered_manual = manual_df.copy()
+    if selected_coders is not None and len(selected_coders) > 0:
+        filtered_manual = filtered_manual[filtered_manual['coder_id'].isin(selected_coders)]
+    
+    stats['manual_coders_used'] = filtered_manual['coder_id'].nunique()
+    stats['manual_total'] = len(filtered_manual)
+    
+    # Manual is selected - need to merge with parquet on oid
+    # First, aggregate manual data if there are multiple coders per oid
+    if aggregate_manual:
+        manual_aggregated = aggregate_manual_coding(
+            filtered_manual, 
+            method=aggregation_method,
+            selected_coders=None  # Already filtered above
+        )
+    else:
+        manual_aggregated = filtered_manual.copy()
+    
+    stats['manual_unique_oid'] = manual_aggregated['oid'].nunique()
+    
+    # Ensure oid types match
+    parquet_df = parquet_df.copy()
+    parquet_df['post_id'] = parquet_df['post_id'].astype(str)
+    manual_aggregated['oid'] = manual_aggregated['oid'].astype(str)
+    
+    # Merge: only keep records that exist in BOTH parquet AND manual
+    merged = parquet_df.merge(
+        manual_aggregated,
+        left_on='post_id',
+        right_on='oid',
+        how='inner',
+        suffixes=('', '_manual')
+    )
+    
+    stats['analysis_records'] = len(merged)
+    
+    return merged, stats
+
+
+def convert_automatic_coding_to_ordinal(
+    df: pd.DataFrame,
+    sent_emo_threshold_low: float = 0.33,
+    sent_emo_threshold_high: float = 0.67,
+    sent_emo_llm_threshold_low: float = 0.33,
+    sent_emo_llm_threshold_high: float = 0.67
+) -> pd.DataFrame:
+    """
+    Convert automatic coding from continuous (0-1) to ordinal (0-2) scale using thresholds.
+    
+    This function creates new columns with '_ordinal' suffix containing the converted values.
+    Original continuous values are preserved.
+    
+    Args:
+        df: DataFrame with automatic coding data
+        sent_emo_threshold_low: Lower threshold for SENT_EMO (0->1 boundary)
+        sent_emo_threshold_high: Upper threshold for SENT_EMO (1->2 boundary)
+        sent_emo_llm_threshold_low: Lower threshold for SENT_EMO_LLM (0->1 boundary)
+        sent_emo_llm_threshold_high: Upper threshold for SENT_EMO_LLM (1->2 boundary)
+        
+    Returns:
+        DataFrame with additional '_ordinal' columns
+    """
+    df = df.copy()
+    
+    # Convert SENT_EMO columns (use original column names, not ordinal)
+    sent_emo_cols = get_sentiment_columns(use_ordinal=False)['sent_emo'] + get_emotion_columns(use_ordinal=False)['sent_emo']
+    for col in sent_emo_cols:
+        if col in df.columns:
+            ordinal_col = col + '_ordinal'
+            df[ordinal_col] = apply_thresholds(
+                df[col],
+                sent_emo_threshold_low,
+                sent_emo_threshold_high
+            )
+    
+    # Convert SENT_EMO_LLM columns (use original column names, not ordinal)
+    sent_emo_llm_cols = get_sentiment_columns(use_ordinal=False)['sent_emo_llm'] + get_emotion_columns(use_ordinal=False)['sent_emo_llm']
+    for col in sent_emo_llm_cols:
+        if col in df.columns:
+            ordinal_col = col + '_ordinal'
+            df[ordinal_col] = apply_thresholds(
+                df[col],
+                sent_emo_llm_threshold_low,
+                sent_emo_llm_threshold_high
+            )
+    
+    return df

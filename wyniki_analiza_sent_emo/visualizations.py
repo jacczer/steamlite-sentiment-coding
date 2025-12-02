@@ -167,14 +167,27 @@ def plot_scatter_comparison(
         )
         return fig
     
+    # Check minimum data for correlation
+    if len(plot_data) < 2:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Za mało danych (wymagane min. 2 punkty)",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+        return fig
+    
     # Add jitter to better visualize overlapping points
     plot_data['col1_jitter'] = plot_data[col1] + np.random.normal(0, 0.05, len(plot_data))
     plot_data['col2_jitter'] = plot_data[col2] + np.random.normal(0, 0.02, len(plot_data))
     
-    # Compute correlation
+    # Compute correlation (safely)
     from scipy.stats import spearmanr, pearsonr
-    spearman_rho, spearman_p = spearmanr(plot_data[col1], plot_data[col2])
-    pearson_r, pearson_p = pearsonr(plot_data[col1], plot_data[col2])
+    try:
+        spearman_rho, spearman_p = spearmanr(plot_data[col1], plot_data[col2])
+        pearson_r, pearson_p = pearsonr(plot_data[col1], plot_data[col2])
+    except Exception:
+        spearman_rho, pearson_r = 0.0, 0.0
     
     fig = go.Figure()
     
@@ -228,8 +241,8 @@ def plot_scatter_comparison(
         title=f"{category_name}: {source1_name} vs {source2_name}<br>" +
               f"<sub>ρ Spearmana = {spearman_rho:.3f} (p = {spearman_p:.4f}), " +
               f"r Pearsona = {pearson_r:.3f} (p = {pearson_p:.4f})</sub>",
-        xaxis_title=f"{source1_name} (0-3)",
-        yaxis_title=f"{source2_name} (0-3)",
+        xaxis_title=f"{source1_name} (0-2)",
+        yaxis_title=f"{source2_name} (0-2)",
         width=600,
         height=500,
         hovermode='closest',
@@ -274,9 +287,8 @@ def plot_distribution_comparison(
     # Auto coding distributions
     colors = ['salmon', 'lightgreen', 'lightyellow']
     for i, (auto_col, auto_name) in enumerate(zip(auto_cols, auto_names)):
-        # Normalize to 0-3 scale for comparison
-        normalized = (data[auto_col] / data[auto_col].max() * 3).round()
-        auto_counts = normalized.value_counts().sort_index()
+        # Data is already in 0-2 ordinal scale (using _ordinal columns)
+        auto_counts = data[auto_col].value_counts().sort_index()
         
         fig.add_trace(go.Bar(
             x=auto_counts.index,
@@ -288,7 +300,7 @@ def plot_distribution_comparison(
     
     fig.update_layout(
         title=f"Rozkład wartości: {category_name}",
-        xaxis_title="Wartość (0=Brak, 1=Niskie, 2=Średnie, 3=Wysokie)",
+        xaxis_title="Wartość (0=Brak, 1=Obecna, 2=Obecność silna)",
         yaxis_title="Liczba obserwacji",
         barmode='group',
         width=700,
