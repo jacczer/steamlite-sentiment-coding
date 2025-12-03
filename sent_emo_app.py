@@ -52,9 +52,27 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 # Custom CSS for modern UI
 CUSTOM_CSS = """
 <style>
+    /* Zoom całej aplikacji o 10% */
+    html {
+        zoom: 1.1;
+    }
+    
+    /* Usunięcie górnego paddingu Streamlit */
+    .stAppHeader {
+        display: none !important;
+    }
+    
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    
+    #MainMenu {
+        display: none !important;
+    }
+    
     /* Main container styling */
     .main .block-container {
-        padding-top: 2rem;
+        padding-top: 0.5rem;
         padding-bottom: 2rem;
         max-width: 900px;
     }
