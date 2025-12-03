@@ -461,13 +461,16 @@ def initialize_session():
         st.session_state.data = load_data()
     if 'current_index' not in st.session_state:
         st.session_state.current_index = 0
+    if 'session_start_index' not in st.session_state:
+        # Zapisz początkowy indeks sesji (używany przy kontynuacji)
+        st.session_state.session_start_index = START_INDEX if START_INDEX is not None else 0
     if 'session_elements' not in st.session_state:
         # Zastosuj zakres i liczbę tekstów z konfiguracji
         all_data = st.session_state.data
-        start = START_INDEX if START_INDEX is not None else 0
-        end = END_INDEX if END_INDEX is not None else len(all_data)
-        selected_data = all_data[start:end]
-        st.session_state.session_elements = selected_data[:NUM_TEXTS_TO_CODE]
+        start = st.session_state.session_start_index
+        # Nie używaj END_INDEX przy kontynuacji - bierz od session_start_index do końca
+        remaining_data = all_data[start:]
+        st.session_state.session_elements = remaining_data[:NUM_TEXTS_TO_CODE]
     if 'coding_stage' not in st.session_state:
         st.session_state.coding_stage = 'sentiment'
     if 'results' not in st.session_state:
@@ -897,34 +900,75 @@ def end_screen():
     """Display end screen."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
+    total_coded = len(st.session_state.results)
+    
+    # Header z gratulacjami
     st.markdown("""
-    <div class="success-banner">
-        <h1 style="color: white; margin-bottom: 10px;">🎉 Gratulacje!</h1>
-        <p style="color: rgba(255,255,255,0.9); font-size: 1.2rem;">
-            Pomyślnie zakończyłeś kodowanie wszystkich tekstów
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 30px; border-radius: 15px; text-align: center; margin: 10px 0 20px 0;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+        <h1 style="color: #4CAF50; margin: 0 0 10px 0; font-size: 1.8rem;">Gratulacje!</h1>
+        <p style="color: #e0e0e0; font-size: 1.1rem; margin: 0;">
+            Sesja zakończona pomyślnie
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Summary
-    total_coded = len(st.session_state.results)
+    # Statystyki
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown(f"""
-        <div style="text-align: center; padding: 30px; background: rgba(255,255,255,0.05); border-radius: 15px;">
-            <h2 style="color: #4CAF50; margin-bottom: 10px;">{total_coded}</h2>
-            <p style="color: #b0b0b0;">zakodowanych tekstów</p>
+        <div style="text-align: center; padding: 20px; background: rgba(76, 175, 80, 0.1); border-radius: 12px; border: 2px solid #4CAF50; margin-bottom: 20px;">
+            <div style="font-size: 2.5rem; font-weight: 700; color: #4CAF50;">{total_coded}</div>
+            <div style="font-size: 0.9rem; color: #b0b0b0;">zakodowanych tekstów</div>
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    # Podziękowania i motywacja
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px 25px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #667eea;">
+        <div style="font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 10px;">
+            🙏 Dziękujemy za Twój wkład!
+        </div>
+        <p style="font-size: 0.9rem; line-height: 1.6; color: #c8c8c8; margin: 0;">
+            Każdy zakodowany tekst przybliża nas do <strong style="color: #667eea;">głębszego zrozumienia</strong>, 
+            jak emocje i sentyment kształtują przekazy dezinformacyjne. Twoja praca pomaga tworzyć narzędzia do skutecznego ich wykrywania i walki z nimi.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # New session button
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Sprawdź czy są jeszcze teksty do zakodowania
+    all_data = st.session_state.data
+    next_start = st.session_state.session_start_index + len(st.session_state.session_elements)
+    remaining_texts = len(all_data) - next_start
+    
+    # Przyciski
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔄 ROZPOCZNIJ NOWĄ SESJĘ", use_container_width=True, type="primary"):
-            st.session_state.clear()
-            st.rerun()
+        if remaining_texts > 0:
+            texts_in_next_session = min(NUM_TEXTS_TO_CODE, remaining_texts)
+            st.markdown(f"""
+            <div style="text-align: center; font-size: 0.8rem; color: #888; margin-bottom: 10px;">
+                Pozostało jeszcze <strong style="color: #667eea;">{remaining_texts}</strong> tekstów do zakodowania
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(f"🚀 KONTYNUUJ – kolejne {texts_in_next_session} tekstów", use_container_width=True, type="primary"):
+                # Zapisz nowy indeks startowy, dane i zresetuj sesję
+                new_start = next_start
+                saved_data = st.session_state.data  # Zachowaj dane przed wyczyszczeniem
+                st.session_state.clear()
+                st.session_state.session_start_index = new_start
+                st.session_state.data = saved_data  # Przywróć dane
+                st.rerun()
+        else:
+            st.markdown("""
+            <div style="text-align: center; padding: 15px; background: rgba(76, 175, 80, 0.15); border-radius: 10px; border: 1px solid #4CAF50;">
+                <div style="font-size: 1.1rem; color: #4CAF50; font-weight: 600;">✅ Wszystkie teksty zostały zakodowane!</div>
+                <p style="font-size: 0.85rem; color: #b0b0b0; margin: 8px 0 0 0;">Baza danych jest kompletna. Wielkie dzięki!</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 def main():
