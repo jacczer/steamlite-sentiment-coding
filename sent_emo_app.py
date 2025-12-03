@@ -13,13 +13,13 @@ from google.oauth2.service_account import Credentials
 
 # ===== KONFIGURACJA SESJI KODOWANIA =====
 # Ustaw liczbę tekstów do zakodowania
-NUM_TEXTS_TO_CODE = 40
+NUM_TEXTS_TO_CODE = 30
 
 # Ustaw zakres elementów do kodowania (numeracja od 0)
 # None = od początku, lub podaj numer startu (np. 150)
-START_INDEX = 200
-# None = do końca, lub podaj numer końca (np. 240)
-END_INDEX = 240
+START_INDEX = 196
+# None = do końca, lub podaj numer końca (np. 230)
+END_INDEX = 226
 # =========================================
 
 # Configuration
@@ -37,7 +37,7 @@ DEFINITIONS = {
     "emotions": {
         "joy": "Reakcja na zysk lub osiągnięcie celu. Obejmuje spektrum od pogody ducha po ekstazę.",
         "trust": "Reakcja na sprzymierzeńca lub członka grupy. Obejmuje spektrum od akceptacji po podziw.",
-        "anticipation": "Reakcja na nowe terytorium lub przyszłe zdarzenie. Obejmuje spektrum od czujności po ekscytację.",
+        "anticipation": "Reakcja na nowe i przyszłe zdarzenie. Obejmuje spektrum od czujności po ekscytację.",
         "surprise": "Reakcja na nagły, nieoczekiwany bodziec. Obejmuje spektrum od zdziwienia po osłupienie.",
         "fear": "Reakcja na zagrożenie. Obejmuje spektrum od niepokoju po przerażenie.",
         "sadness": "Reakcja na utratę ważnego zasobu lub osoby. Obejmuje spektrum od przygnębienia po żałobę.",
@@ -162,11 +162,11 @@ CUSTOM_CSS = """
         background: rgba(40, 40, 50, 0.9) !important;
         border: 2px solid rgba(255,255,255,0.2) !important;
         border-radius: 8px !important;
-        padding: 4px 8px !important;
+        padding: 3px 6px !important;
         font-size: 0.55rem !important;
         color: #d0d0d0 !important;
         font-weight: 500 !important;
-        min-height: 36px !important;
+        min-height: 29px !important;
     }
     
     div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
@@ -179,11 +179,11 @@ CUSTOM_CSS = """
         background: rgba(40, 40, 50, 0.95) !important;
         border: 2px solid #5d6d7e !important;
         border-radius: 8px !important;
-        padding: 4px 8px !important;
+        padding: 3px 6px !important;
         font-size: 0.55rem !important;
         color: #ffffff !important;
         font-weight: 600 !important;
-        min-height: 36px !important;
+        min-height: 29px !important;
     }
     
     /* Main action buttons (DALEJ, ZAPISZ, etc.) */
@@ -319,7 +319,7 @@ EMOTIONS = {
     "fear": {"pl": "Strach", "icon": "😨", "bg": "rgba(60, 110, 160, 0.07)", "border": "#4a6a8a"},
     "sadness": {"pl": "Smutek", "icon": "😢", "bg": "rgba(70, 80, 130, 0.07)", "border": "#4a5575"},
     "disgust": {"pl": "Wstręt", "icon": "🤢", "bg": "rgba(110, 140, 80, 0.07)", "border": "#5a7a4a"},
-    "anger": {"pl": "Złość", "icon": "😠", "bg": "rgba(180, 67, 60, 0.07)", "border": "#8a4a46"}
+    "anger": {"pl": "Gniew", "icon": "😠", "bg": "rgba(180, 67, 60, 0.07)", "border": "#8a4a46"}
 }
 
 # Color mapping for slider thumb based on value
@@ -387,7 +387,7 @@ def render_scale_row(row_key: str,
             border-radius: 8px !important;
             font-size: {button_font_size} !important;
             padding: {button_padding} !important;
-            min-height: 38px !important;
+            min-height: 30px !important;
         }}
         div[data-testid="stVerticalBlock"]:has(> .element-container > .stMarkdown .{marker_class}) button[kind="secondary"] {{
             border: 2px solid rgba(255,255,255,0.25) !important;
@@ -454,7 +454,9 @@ def load_data():
 def initialize_session():
     """Initialize session state variables."""
     if 'screen' not in st.session_state:
-        st.session_state.screen = 'start'
+        st.session_state.screen = 'start'  # Start with main start screen
+    if 'start_screen_passed' not in st.session_state:
+        st.session_state.start_screen_passed = False
     if 'data' not in st.session_state:
         st.session_state.data = load_data()
     if 'current_index' not in st.session_state:
@@ -476,6 +478,93 @@ def initialize_session():
         st.session_state.coder_id = ""
 
 
+def instructions_screen():
+    """Display instructions screen with coding guidelines."""
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    
+    # Header - spójny z głównym ekranem startowym
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 16px 25px; border-radius: 12px; text-align: center; margin: 10px 0 15px 0;">
+        <h2 style="color: white; margin: 0; font-size: 1.4rem;">📋 Zasady Kodowania</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Rule 1: Operational definitions - kompaktowy
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 14px 18px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #3498db;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="background: #3498db; color: white; min-width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem;">1</div>
+            <div>
+                <div style="font-size: 0.92rem; font-weight: 600; color: #fff; margin-bottom: 4px;">📖 Oceniaj według definicji operacyjnych</div>
+                <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0;">
+                    Intensywność sentymentu i emocji oceniaj <strong style="color: #3498db;">wyłącznie na podstawie definicji</strong> wyświetlanych przy każdej kategorii. Nie kieruj się intuicją – stosuj podane kryteria.
+                </p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Rule 2: Sender's emotions - kompaktowy
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 14px 18px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #e74c3c;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="background: #e74c3c; color: white; min-width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem;">2</div>
+            <div>
+                <div style="font-size: 0.92rem; font-weight: 600; color: #fff; margin-bottom: 4px;">🎭 Koduj emocje nadawcy, nie odbiorców</div>
+                <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0;">
+                    Oceniaj <strong style="color: #e74c3c;">ton wypowiedzi autora tekstu</strong> – czyli emocje nadawcy/głosu narracji. <br>
+                    <span style="color: #888; font-size: 0.75rem;">❌ Nie koduj: hipotetycznych reakcji czytelników ani emocji osób opisywanych w tekście.</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Rule 3: Mixed emotions - kompaktowy
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 14px 18px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #f39c12;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="background: #f39c12; color: white; min-width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem;">3</div>
+            <div>
+                <div style="font-size: 0.92rem; font-weight: 600; color: #fff; margin-bottom: 4px;">🔀 Tekst może zawierać mieszany wydźwięk</div>
+                <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0;">
+                    Jeden tekst może wyrażać <strong style="color: #f39c12;">kilka emocji i sentymentów jednocześnie</strong>. <br>
+                    <span style="color: #aaa; font-size: 0.75rem;">Przykład: sucha informacja o wypadku → częściowo negatywny i neutralny sentyment.</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Rule 4: Hidden tone priority - kompaktowy
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 14px 18px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #9b59b6;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="background: #9b59b6; color: white; min-width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem;">4</div>
+            <div>
+                <div style="font-size: 0.92rem; font-weight: 600; color: #fff; margin-bottom: 4px;">🎯Ukryty ton, nie dosłowne słowa</div>
+                <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0;">
+                    Oceń <strong style="color: #9b59b6;">faktyczny, prawdziwy ton wypowiedzi</strong>, to co autor naprawdę chce przekazać, nawet jeśli słowa brzmią neutralnie lub pozytywnie.
+                </p>
+                <div style="background: rgba(155, 89, 182, 0.15); padding: 8px 12px; border-radius: 6px; margin-top: 8px;">
+                    <p style="font-size: 0.75rem; color: #d0d0d0; margin: 0; font-style: italic;">
+                        💡 <strong style="color: #bb8fce;">Przykład:</strong> „No wspaniale, że znowu nas okłamali" <span style="color: #e74c3c;">→ negatywny sentyment + silny gniew </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+   
+    # Continue button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("✓ ROZUMIEM – ROZPOCZNIJ KODOWANIE", use_container_width=True, type="primary"):
+            st.session_state.screen = 'coding'
+            st.rerun()
+
+
 def start_screen():
     """Display start screen."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -489,8 +578,8 @@ def start_screen():
     
     # Instructions
     st.markdown(f"""
-    <div style="font-size: 0.88rem; color: #d0d0d0; margin-bottom: 10px;">
-    Twoim zadaniem jest ocena <strong>{len(st.session_state.session_elements)} tekstów</strong> pod kątem obecności sentymentu i emocji. Proces kodowania składa się z dwóch kroków:
+    <div style="font-size: 0.98rem; color: #d0d0d0; margin-bottom: 10px;">
+    Twoim zadaniem jest ocena <strong>{len(st.session_state.session_elements)} tekstów</strong> pod kątem obecności sentymentu i emocji. Zadanie składa się z dwóch kroków:
     </div>
     """, unsafe_allow_html=True)
     
@@ -502,7 +591,7 @@ def start_screen():
             <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">Sentyment</div>
         </div>
         <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0 0 0 32px;">
-            Oceń natężenie trzech rodzajów sentymentu: : pozytywny, negatywny, neutralny
+            Oceń natężenie trzech rodzajów sentymentu: pozytywny, negatywny, neutralny
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -515,7 +604,7 @@ def start_screen():
             <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">Emocje</div>
         </div>
         <p style="font-size: 0.8rem; line-height: 1.4; color: #c8c8c8; margin: 0 0 0 32px;">
-            Oceń natężenie ośmiu emocji: radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, złość
+            Oceń natężenie ośmiu emocji: radość, zaufanie, oczekiwanie, zaskoczenie, strach, smutek, wstręt, gniew
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -555,15 +644,16 @@ def start_screen():
         label_visibility="collapsed"
     )
     
-    # Start button
+    # Buttons
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🚀 ROZPOCZNIJ KODOWANIE", use_container_width=True, type="primary"):
+        if st.button("🚀 DALEJ – ZASADY KODOWANIA", use_container_width=True, type="primary"):
             if not coder_id.strip():
                 st.warning("Proszę podać identyfikator przed rozpoczęciem")
             else:
                 st.session_state.coder_id = coder_id.strip()
-                st.session_state.screen = 'coding'
+                st.session_state.start_screen_passed = True
+                st.session_state.screen = 'instructions'
                 st.rerun()
 
 
@@ -577,6 +667,7 @@ def coding_screen():
     
     # Modern compact progress header
     progress_percent = int((progress / total_texts) * 100)
+    
     st.markdown(f"""
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; margin-bottom: 10px;">
         <div style="flex: 1; margin-right: 15px;">
@@ -655,9 +746,13 @@ def sentiment_coding_ui(text):
     
     st.markdown("")
     
-    # Next button
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Navigation buttons - Wróć (puste), Zasady (środek), DALEJ (prawo)
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
+        if st.button("📋 Zasady kodowania", key="rules_btn_sent", use_container_width=True):
+            st.session_state.screen = 'instructions'
+            st.rerun()
+    with col3:
         if st.button("DALEJ → Emocje", use_container_width=True, type="primary"):
             st.session_state.current_coding['sentiment'] = sentiment_values
             st.session_state.coding_stage = 'emotion'
@@ -730,7 +825,7 @@ def emotion_coding_ui(text):
     
     st.markdown("")
     
-    # Navigation buttons
+    # Navigation buttons - Wróć (lewo), Zasady (środek), ZAPISZ (prawo)
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col1:
@@ -738,8 +833,13 @@ def emotion_coding_ui(text):
             st.session_state.coding_stage = 'sentiment'
             st.rerun()
     
+    with col2:
+        if st.button("📋 Zasady kodowania", key="rules_btn_emo", use_container_width=True):
+            st.session_state.screen = 'instructions'
+            st.rerun()
+    
     with col3:
-        if st.button("ZAPISZ ✓", use_container_width=True, type="primary"):
+        if st.button("ZAPISZ i dalej →", use_container_width=True, type="primary"):
             current_element = st.session_state.session_elements[st.session_state.current_index]
             
             # Save to Google Sheets
@@ -778,6 +878,7 @@ def emotion_coding_ui(text):
                 save_results()
                 st.session_state.screen = 'end'
             
+            st.rerun()
             st.rerun()
 
 
@@ -838,6 +939,8 @@ def main():
     
     if st.session_state.screen == 'start':
         start_screen()
+    elif st.session_state.screen == 'instructions':
+        instructions_screen()
     elif st.session_state.screen == 'coding':
         coding_screen()
     elif st.session_state.screen == 'end':
