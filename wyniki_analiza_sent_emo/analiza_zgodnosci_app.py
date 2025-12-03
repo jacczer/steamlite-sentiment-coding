@@ -1276,6 +1276,7 @@ def show_intercoder_agreement(manual_df, categories):
     """
     Show inter-coder agreement analysis for manual coders only.
     This allows comparison of agreement between human coders before comparing with automatic systems.
+    Now includes sub-tabs for metrics, heatmap, and element preview.
     """
     import numpy as np
     from itertools import combinations
@@ -1293,67 +1294,12 @@ def show_intercoder_agreement(manual_df, categories):
         st.info("Potrzebnych jest co najmniej 2 koderów do analizy zgodności")
         return
     
-    # Methodology explanation
-    with st.expander("📚 **O analizie zgodności międzykoderowej**", expanded=False):
-        st.markdown("""
-        ### Cel analizy
-        
-        Ta zakładka pozwala ocenić **zgodność między koderami ludzkimi** zanim 
-        porównasz ich z systemami automatycznymi. Jest to kluczowy krok w analizie 
-        treści - jeśli koderzy nie zgadzają się między sobą, trudno oczekiwać 
-        wysokiej zgodności z systemami automatycznymi.
-        
-        ### Dlaczego to ważne?
-        
-        1. **Walidacja schematu kodowania** - niska zgodność może oznaczać 
-           niejasne definicje kategorii
-        2. **Identyfikacja trudnych kategorii** - niektóre cechy są trudniejsze 
-           do obiektywnej oceny
-        3. **Punkt odniesienia** - zgodność między koderami stanowi "górną granicę" 
-           dla zgodności z systemami automatycznymi
-        
-        ### Stosowane metryki
-        
-        - **Krippendorff's Alpha** - uniwersalna, obsługuje wielu koderów i brakujące dane
-        - **Cohen's Kappa** (parami) - dla porównań 2 koderów, z wagami kwadratowymi
-        - **Procent zgodności** - prosta miara, ile razy koderzy zgodzili się
-        
-        ### Interpretacja
-        
-        | Wartość α/κ | Interpretacja |
-        |-------------|---------------|
-        | ≥ 0.80 | Wysoka zgodność - można używać do wnioskowania |
-        | 0.667 - 0.80 | Akceptowalna - wnioski wstępne |
-        | < 0.667 | Niska - wymaga rewizji schematu kodowania |
-        """)
-    
-    # Summary statistics
-    st.markdown("#### 📊 Statystyki koderów")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Liczba koderów", len(coders))
-    
-    with col2:
-        total_oid = manual_df['oid'].nunique()
-        st.metric("Unikalnych elementów", total_oid)
-    
-    with col3:
-        # Average overlap - how many coders coded each item on average
-        avg_coders_per_item = manual_df.groupby('oid')['coder_id'].nunique().mean()
-        st.metric("Śr. koderów/element", f"{avg_coders_per_item:.2f}")
-    
-    # Coder breakdown
-    with st.expander("📋 Szczegóły koderów"):
-        coder_stats = manual_df.groupby('coder_id').agg({
-            'oid': 'nunique',
-            'timestamp': 'first'
-        }).reset_index()
-        coder_stats.columns = ['Koder', 'Zakodowanych elementów', 'Pierwsze kodowanie']
-        st.dataframe(coder_stats, use_container_width=True)
-    
-    st.markdown("---")
+    # === SUB-TABS FOR INTERCODER ANALYSIS ===
+    subtab1, subtab2, subtab3 = st.tabs([
+        "📊 Metryki zgodności",
+        "🗺️ Macierz zgodności",
+        "🔍 Podgląd elementów"
+    ])
     
     # Get column mappings for manual data
     labels = data_loader.get_category_labels()
@@ -1371,249 +1317,731 @@ def show_intercoder_agreement(manual_df, categories):
     for cat_type in manual_cols:
         manual_cols[cat_type] = [c for c in manual_cols[cat_type] if c in manual_df.columns]
     
-    # === OVERALL AGREEMENT (ALL CODERS) ===
-    st.markdown("#### 🔬 Ogólna zgodność wszystkich koderów")
-    
-    for cat_type in categories:
-        if cat_type not in manual_cols or not manual_cols[cat_type]:
-            continue
+    # ========== SUBTAB 1: METRICS ==========
+    with subtab1:
+        # Methodology explanation
+        with st.expander("📚 **O analizie zgodności międzykoderowej**", expanded=False):
+            st.markdown("""
+            ### Cel analizy
             
-        cat_name = 'Sentyment' if cat_type == 'sentiment' else 'Emocje'
-        st.markdown(f"##### {cat_name}")
+            Ta zakładka pozwala ocenić **zgodność między koderami ludzkimi** zanim 
+            porównasz ich z systemami automatycznymi. Jest to kluczowy krok w analizie 
+            treści - jeśli koderzy nie zgadzają się między sobą, trudno oczekiwać 
+            wysokiej zgodności z systemami automatycznymi.
+            
+            ### Dlaczego to ważne?
+            
+            1. **Walidacja schematu kodowania** - niska zgodność może oznaczać 
+               niejasne definicje kategorii
+            2. **Identyfikacja trudnych kategorii** - niektóre cechy są trudniejsze 
+               do obiektywnej oceny
+            3. **Punkt odniesienia** - zgodność między koderami stanowi "górną granicę" 
+               dla zgodności z systemami automatycznymi
+            
+            ### Stosowane metryki
+            
+            - **Krippendorff's Alpha** - uniwersalna, obsługuje wielu koderów i brakujące dane
+            - **Cohen's Kappa** (parami) - dla porównań 2 koderów, z wagami kwadratowymi
+            - **Procent zgodności** - prosta miara, ile razy koderzy zgodzili się
+            
+            ### Uwaga metodologiczna
+            
+            **Analiza uwzględnia tylko wspólne elementy (oid) między porównywanymi koderami.**
+            Jeśli jeden koder zakodował więcej elementów niż inny, nadmiarowe elementy 
+            są pomijane w obliczeniach zgodności.
+            
+            ### Interpretacja
+            
+            | Wartość α/κ | Interpretacja |
+            |-------------|---------------|
+            | ≥ 0.80 | Wysoka zgodność - można używać do wnioskowania |
+            | 0.667 - 0.80 | Akceptowalna - wnioski wstępne |
+            | < 0.667 | Niska - wymaga rewizji schematu kodowania |
+            """)
         
-        cols_to_analyze = manual_cols[cat_type]
-        results = []
+        # Summary statistics
+        st.markdown("#### 📊 Statystyki koderów")
         
-        for col in cols_to_analyze:
-            # Prepare data matrix for Krippendorff's Alpha
-            # Rows = coders, Columns = items
-            pivot = manual_df.pivot_table(
-                index='coder_id', 
-                columns='oid', 
-                values=col, 
-                aggfunc='first'
-            )
-            
-            if pivot.shape[0] < 2:
-                continue
-            
-            # Calculate Krippendorff's Alpha
-            data_matrix = pivot.values
-            
-            try:
-                # Use krippendorff library
-                import krippendorff
-                alpha = krippendorff.alpha(
-                    reliability_data=data_matrix,
-                    level_of_measurement='ordinal'
-                )
-            except Exception:
-                alpha = np.nan
-            
-            # Calculate pairwise agreement (average)
-            pairwise_agreements = []
-            for i, coder1 in enumerate(pivot.index):
-                for j, coder2 in enumerate(pivot.index):
-                    if i < j:
-                        # Find common items
-                        c1_data = pivot.loc[coder1]
-                        c2_data = pivot.loc[coder2]
-                        mask = c1_data.notna() & c2_data.notna()
-                        if mask.sum() > 0:
-                            agree = (c1_data[mask] == c2_data[mask]).mean()
-                            pairwise_agreements.append(agree)
-            
-            avg_agreement = np.mean(pairwise_agreements) if pairwise_agreements else np.nan
-            
-            label = labels.get(col, col)
-            results.append({
-                'Kategoria': label,
-                'Krippendorff α': alpha,
-                'Śr. % zgodności': avg_agreement * 100 if not np.isnan(avg_agreement) else np.nan,
-                'Koderów': pivot.shape[0],
-                'Elementów': pivot.shape[1]
-            })
+        col1, col2, col3, col4 = st.columns(4)
         
-        if results:
-            results_df = pd.DataFrame(results)
-            
-            # Format and display
-            def format_alpha(val):
-                if pd.isna(val):
-                    return "—"
-                color = '#00ff00' if val >= 0.8 else '#ffff00' if val >= 0.667 else '#ff6600'
-                return f'<span style="color:{color}">{val:.3f}</span>'
-            
-            def format_pct(val):
-                if pd.isna(val):
-                    return "—"
-                return f"{val:.1f}%"
-            
-            # Display with styling
-            display_df = results_df.copy()
-            display_df['Krippendorff α'] = display_df['Krippendorff α'].apply(lambda x: f"{x:.3f}" if not pd.isna(x) else "—")
-            display_df['Śr. % zgodności'] = display_df['Śr. % zgodności'].apply(format_pct)
-            
-            st.dataframe(display_df, use_container_width=True)
-            
-            # Summary
-            valid_alphas = [r['Krippendorff α'] for r in results if not pd.isna(r['Krippendorff α'])]
-            if valid_alphas:
-                avg_alpha = np.mean(valid_alphas)
-                status = "✅ Wysoka" if avg_alpha >= 0.8 else "⚠️ Akceptowalna" if avg_alpha >= 0.667 else "❌ Niska"
-                st.caption(f"Średnia α dla {cat_name.lower()}: {avg_alpha:.3f} ({status})")
-    
-    st.markdown("---")
-    
-    # === PAIRWISE AGREEMENT ===
-    st.markdown("#### 🔗 Zgodność parami między koderami")
-    
-    if len(coders) >= 2:
-        # Let user select which coders to compare
-        col1, col2 = st.columns(2)
         with col1:
-            coder1 = st.selectbox("Koder 1", coders, index=0, key="intercoder_coder1")
+            st.metric("Liczba koderów", len(coders))
+        
         with col2:
-            coder2 = st.selectbox("Koder 2", [c for c in coders if c != coder1], key="intercoder_coder2")
+            total_oid = manual_df['oid'].nunique()
+            st.metric("Unikalnych elementów", total_oid)
         
-        # Get data for both coders
-        c1_df = manual_df[manual_df['coder_id'] == coder1]
-        c2_df = manual_df[manual_df['coder_id'] == coder2]
+        with col3:
+            # Average overlap - how many coders coded each item on average
+            avg_coders_per_item = manual_df.groupby('oid')['coder_id'].nunique().mean()
+            st.metric("Śr. koderów/element", f"{avg_coders_per_item:.2f}")
         
-        # Find common oids
-        common_oids = set(c1_df['oid']) & set(c2_df['oid'])
+        with col4:
+            # Find common elements (coded by ALL coders)
+            oid_counts = manual_df.groupby('oid')['coder_id'].nunique()
+            common_all = (oid_counts == len(coders)).sum()
+            st.metric("Wspólnych (wszyscy)", common_all)
         
-        if len(common_oids) == 0:
-            st.warning(f"Brak wspólnych elementów między {coder1} i {coder2}")
-        else:
-            st.info(f"Wspólnych elementów: {len(common_oids)}")
+        # Coder breakdown
+        with st.expander("📋 Szczegóły koderów"):
+            coder_stats = manual_df.groupby('coder_id').agg({
+                'oid': 'nunique',
+                'timestamp': 'first'
+            }).reset_index()
+            coder_stats.columns = ['Koder', 'Zakodowanych elementów', 'Pierwsze kodowanie']
+            st.dataframe(coder_stats, use_container_width=True)
             
-            # Merge on common oids
-            c1_common = c1_df[c1_df['oid'].isin(common_oids)].set_index('oid')
-            c2_common = c2_df[c2_df['oid'].isin(common_oids)].set_index('oid')
+            # Show overlap matrix
+            st.markdown("**Wspólne elementy między koderami:**")
+            overlap_matrix = pd.DataFrame(index=coders, columns=coders, dtype=int)
+            for c1 in coders:
+                for c2 in coders:
+                    oids_c1 = set(manual_df[manual_df['coder_id'] == c1]['oid'])
+                    oids_c2 = set(manual_df[manual_df['coder_id'] == c2]['oid'])
+                    overlap_matrix.loc[c1, c2] = len(oids_c1 & oids_c2)
+            st.dataframe(overlap_matrix, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # === OVERALL AGREEMENT (ALL CODERS - ONLY COMMON OIDs) ===
+        st.markdown("#### 🔬 Ogólna zgodność wszystkich koderów")
+        st.caption("⚠️ Analiza obejmuje tylko elementy zakodowane przez WSZYSTKICH koderów")
+        
+        # Find oids coded by all coders
+        oid_coder_counts = manual_df.groupby('oid')['coder_id'].nunique()
+        common_oids_all = oid_coder_counts[oid_coder_counts == len(coders)].index.tolist()
+        
+        if len(common_oids_all) == 0:
+            st.warning("Brak elementów zakodowanych przez wszystkich koderów. Analiza ogólna niemożliwa.")
+        else:
+            st.info(f"Wspólnych elementów: **{len(common_oids_all)}** (zakodowane przez wszystkich {len(coders)} koderów)")
+            
+            # Filter to common oids
+            common_df = manual_df[manual_df['oid'].isin(common_oids_all)]
             
             for cat_type in categories:
                 if cat_type not in manual_cols or not manual_cols[cat_type]:
                     continue
                     
                 cat_name = 'Sentyment' if cat_type == 'sentiment' else 'Emocje'
-                st.markdown(f"##### {cat_name} - {coder1} vs {coder2}")
+                st.markdown(f"##### {cat_name}")
                 
                 cols_to_analyze = manual_cols[cat_type]
-                pairwise_results = []
+                results = []
                 
                 for col in cols_to_analyze:
-                    if col not in c1_common.columns or col not in c2_common.columns:
+                    # Prepare data matrix for Krippendorff's Alpha
+                    # Rows = coders, Columns = items
+                    pivot = common_df.pivot_table(
+                        index='coder_id', 
+                        columns='oid', 
+                        values=col, 
+                        aggfunc='first'
+                    )
+                    
+                    if pivot.shape[0] < 2:
                         continue
                     
-                    # Get aligned data
-                    data1 = c1_common[col].reindex(sorted(common_oids))
-                    data2 = c2_common[col].reindex(sorted(common_oids))
+                    # Calculate Krippendorff's Alpha
+                    data_matrix = pivot.values
                     
-                    # Remove NaN pairs
-                    mask = data1.notna() & data2.notna()
-                    d1 = data1[mask].values
-                    d2 = data2[mask].values
-                    
-                    if len(d1) < 2:
-                        continue
-                    
-                    # Calculate metrics
                     try:
-                        kappa_result = agreement_metrics.compute_cohens_kappa(d1, d2)
-                        kappa = kappa_result['kappa']
-                        kappa_ci = kappa_result.get('ci_95', (np.nan, np.nan))
+                        import krippendorff
+                        alpha = krippendorff.alpha(
+                            reliability_data=data_matrix,
+                            level_of_measurement='ordinal'
+                        )
                     except Exception:
-                        kappa = np.nan
-                        kappa_ci = (np.nan, np.nan)
+                        alpha = np.nan
                     
-                    # Percent agreement
-                    pct_agree = (d1 == d2).mean() * 100
+                    # Calculate pairwise agreement (average) - only on common items
+                    pairwise_agreements = []
+                    for i, coder1 in enumerate(pivot.index):
+                        for j, coder2 in enumerate(pivot.index):
+                            if i < j:
+                                c1_data = pivot.loc[coder1]
+                                c2_data = pivot.loc[coder2]
+                                mask = c1_data.notna() & c2_data.notna()
+                                if mask.sum() > 0:
+                                    agree = (c1_data[mask] == c2_data[mask]).mean()
+                                    pairwise_agreements.append(agree)
+                    
+                    avg_agreement = np.mean(pairwise_agreements) if pairwise_agreements else np.nan
                     
                     label = labels.get(col, col)
-                    pairwise_results.append({
+                    results.append({
                         'Kategoria': label,
-                        'Cohen\'s κ': kappa,
-                        'CI 95%': f"[{kappa_ci[0]:.2f}, {kappa_ci[1]:.2f}]" if not np.isnan(kappa_ci[0]) else "—",
-                        '% zgodności': pct_agree,
-                        'N': len(d1)
+                        'Krippendorff α': alpha,
+                        'Śr. % zgodności': avg_agreement * 100 if not np.isnan(avg_agreement) else np.nan,
+                        'Koderów': pivot.shape[0],
+                        'Wspólnych elem.': len(common_oids_all)
                     })
                 
-                if pairwise_results:
-                    pairwise_df = pd.DataFrame(pairwise_results)
-                    pairwise_df['Cohen\'s κ'] = pairwise_df['Cohen\'s κ'].apply(lambda x: f"{x:.3f}" if not pd.isna(x) else "—")
-                    pairwise_df['% zgodności'] = pairwise_df['% zgodności'].apply(lambda x: f"{x:.1f}%")
-                    st.dataframe(pairwise_df, use_container_width=True)
+                if results:
+                    results_df = pd.DataFrame(results)
+                    display_df = results_df.copy()
+                    display_df['Krippendorff α'] = display_df['Krippendorff α'].apply(lambda x: f"{x:.3f}" if not pd.isna(x) else "—")
+                    display_df['Śr. % zgodności'] = display_df['Śr. % zgodności'].apply(lambda x: f"{x:.1f}%" if not pd.isna(x) else "—")
+                    st.dataframe(display_df, use_container_width=True)
+                    
+                    valid_alphas = [r['Krippendorff α'] for r in results if not pd.isna(r['Krippendorff α'])]
+                    if valid_alphas:
+                        avg_alpha = np.mean(valid_alphas)
+                        status = "✅ Wysoka" if avg_alpha >= 0.8 else "⚠️ Akceptowalna" if avg_alpha >= 0.667 else "❌ Niska"
+                        st.caption(f"Średnia α dla {cat_name.lower()}: {avg_alpha:.3f} ({status})")
+        
+        st.markdown("---")
+        
+        # === PAIRWISE AGREEMENT ===
+        st.markdown("#### 🔗 Zgodność parami między koderami")
+        
+        if len(coders) >= 2:
+            col1, col2 = st.columns(2)
+            with col1:
+                coder1 = st.selectbox("Koder 1", coders, index=0, key="intercoder_coder1")
+            with col2:
+                coder2 = st.selectbox("Koder 2", [c for c in coders if c != coder1], key="intercoder_coder2")
+            
+            # Get data for both coders
+            c1_df = manual_df[manual_df['coder_id'] == coder1]
+            c2_df = manual_df[manual_df['coder_id'] == coder2]
+            
+            # Find common oids
+            common_oids = set(c1_df['oid']) & set(c2_df['oid'])
+            
+            # Show statistics
+            col_stat1, col_stat2, col_stat3 = st.columns(3)
+            with col_stat1:
+                st.metric(f"Elementy {coder1}", len(c1_df['oid'].unique()))
+            with col_stat2:
+                st.metric(f"Elementy {coder2}", len(c2_df['oid'].unique()))
+            with col_stat3:
+                st.metric("Wspólnych elementów", len(common_oids))
+            
+            if len(common_oids) == 0:
+                st.warning(f"Brak wspólnych elementów między {coder1} i {coder2}")
+            else:
+                st.success(f"Analiza dla **{len(common_oids)}** wspólnych elementów")
+                
+                c1_common = c1_df[c1_df['oid'].isin(common_oids)].set_index('oid')
+                c2_common = c2_df[c2_df['oid'].isin(common_oids)].set_index('oid')
+                
+                for cat_type in categories:
+                    if cat_type not in manual_cols or not manual_cols[cat_type]:
+                        continue
+                        
+                    cat_name = 'Sentyment' if cat_type == 'sentiment' else 'Emocje'
+                    st.markdown(f"##### {cat_name} - {coder1} vs {coder2}")
+                    
+                    cols_to_analyze = manual_cols[cat_type]
+                    pairwise_results = []
+                    
+                    for col in cols_to_analyze:
+                        if col not in c1_common.columns or col not in c2_common.columns:
+                            continue
+                        
+                        data1 = c1_common[col].reindex(sorted(common_oids))
+                        data2 = c2_common[col].reindex(sorted(common_oids))
+                        
+                        mask = data1.notna() & data2.notna()
+                        d1 = data1[mask].values
+                        d2 = data2[mask].values
+                        
+                        if len(d1) < 2:
+                            continue
+                        
+                        try:
+                            kappa_result = agreement_metrics.compute_cohens_kappa(d1, d2)
+                            kappa = kappa_result['kappa']
+                            kappa_ci = kappa_result.get('ci_95', (np.nan, np.nan))
+                        except Exception:
+                            kappa = np.nan
+                            kappa_ci = (np.nan, np.nan)
+                        
+                        pct_agree = (d1 == d2).mean() * 100
+                        
+                        label = labels.get(col, col)
+                        pairwise_results.append({
+                            'Kategoria': label,
+                            'Cohen\'s κ': kappa,
+                            'CI 95%': f"[{kappa_ci[0]:.2f}, {kappa_ci[1]:.2f}]" if not np.isnan(kappa_ci[0]) else "—",
+                            '% zgodności': pct_agree,
+                            'N': len(d1)
+                        })
+                    
+                    if pairwise_results:
+                        pairwise_df = pd.DataFrame(pairwise_results)
+                        pairwise_df['Cohen\'s κ'] = pairwise_df['Cohen\'s κ'].apply(lambda x: f"{x:.3f}" if not pd.isna(x) else "—")
+                        pairwise_df['% zgodności'] = pairwise_df['% zgodności'].apply(lambda x: f"{x:.1f}%")
+                        st.dataframe(pairwise_df, use_container_width=True)
     
-    st.markdown("---")
+    # ========== SUBTAB 2: HEATMAP ==========
+    with subtab2:
+        st.markdown("#### 🗺️ Macierz zgodności między koderami")
+        st.caption("Wartości pokazują % zgodności dla wspólnych elementów między każdą parą koderów")
+        
+        all_cols = []
+        for cat_type in categories:
+            if cat_type in manual_cols:
+                all_cols.extend(manual_cols[cat_type])
+        
+        if all_cols:
+            selected_col = st.selectbox(
+                "Wybierz kategorię",
+                all_cols,
+                format_func=lambda x: labels.get(x, x),
+                key="intercoder_heatmap_col"
+            )
+            
+            # Create agreement matrix - only for common items
+            agreement_matrix = pd.DataFrame(
+                index=coders,
+                columns=coders,
+                dtype=float
+            )
+            
+            common_count_matrix = pd.DataFrame(
+                index=coders,
+                columns=coders,
+                dtype=int
+            )
+            
+            for c1 in coders:
+                for c2 in coders:
+                    c1_data = manual_df[manual_df['coder_id'] == c1].set_index('oid')
+                    c2_data = manual_df[manual_df['coder_id'] == c2].set_index('oid')
+                    
+                    # Find common oids
+                    common = set(c1_data.index) & set(c2_data.index)
+                    common_count_matrix.loc[c1, c2] = len(common)
+                    
+                    if c1 == c2:
+                        agreement_matrix.loc[c1, c2] = 1.0
+                    elif len(common) > 0 and selected_col in c1_data.columns and selected_col in c2_data.columns:
+                        d1 = c1_data.loc[list(common), selected_col]
+                        d2 = c2_data.loc[list(common), selected_col]
+                        mask = d1.notna() & d2.notna()
+                        if mask.sum() > 0:
+                            agreement_matrix.loc[c1, c2] = (d1[mask] == d2[mask]).mean()
+                        else:
+                            agreement_matrix.loc[c1, c2] = np.nan
+                    else:
+                        agreement_matrix.loc[c1, c2] = np.nan
+            
+            # Create custom text showing agreement % and count
+            text_matrix = []
+            for i, c1 in enumerate(coders):
+                row = []
+                for j, c2 in enumerate(coders):
+                    agr = agreement_matrix.loc[c1, c2]
+                    cnt = common_count_matrix.loc[c1, c2]
+                    if pd.isna(agr):
+                        row.append(f"n={cnt}")
+                    else:
+                        row.append(f"{agr:.0%}<br>n={cnt}")
+                text_matrix.append(row)
+            
+            fig = px.imshow(
+                agreement_matrix.values.astype(float),
+                x=agreement_matrix.columns,
+                y=agreement_matrix.index,
+                labels=dict(x="Koder", y="Koder", color="Zgodność"),
+                aspect="auto",
+                color_continuous_scale="RdYlGn",
+                zmin=0,
+                zmax=1
+            )
+            
+            # Add text annotations
+            fig.update_traces(
+                text=text_matrix,
+                texttemplate="%{text}",
+                textfont=dict(size=11)
+            )
+            
+            fig.update_layout(
+                title=f"Macierz zgodności - {labels.get(selected_col, selected_col)}",
+                template="plotly_dark",
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                height=400
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Summary
+            valid_vals = agreement_matrix.values[np.triu_indices_from(agreement_matrix.values, k=1)]
+            valid_vals = valid_vals[~np.isnan(valid_vals.astype(float))]
+            if len(valid_vals) > 0:
+                avg_off_diag = np.mean(valid_vals)
+                st.caption(f"Średnia zgodność między koderami: {avg_off_diag:.1%}")
     
-    # === AGREEMENT HEATMAP ===
-    st.markdown("#### 🗺️ Macierz zgodności między koderami")
+    # ========== SUBTAB 3: ELEMENT PREVIEW ==========
+    with subtab3:
+        show_intercoder_element_preview(manual_df, categories, coders, manual_cols, labels)
+
+
+def show_intercoder_element_preview(manual_df, categories, coders, manual_cols, labels):
+    """
+    Show element preview for inter-coder comparison.
+    Similar to show_element_preview but focused on manual coders only.
+    """
+    st.markdown("#### 🔍 Podgląd elementów - porównanie koderów")
     
-    # Select category for heatmap
+    # Option to include automatic sources
+    include_auto = st.checkbox(
+        "📊 Pokaż również dane z SENT_EMO i SENT_EMO_LLM",
+        value=False,
+        key="intercoder_preview_include_auto",
+        help="Zaznacz, aby porównać oceny koderów z automatycznymi systemami kodowania"
+    )
+    
+    # Get parquet data if needed
+    parquet_df = None
+    if include_auto:
+        parquet_df = st.session_state.get('parquet_data')
+        if parquet_df is None:
+            st.warning("Dane z Parquet (SENT_EMO, SENT_EMO_LLM) nie są załadowane")
+            include_auto = False
+    
+    # Select coders to compare
+    st.markdown("**Wybierz koderów do porównania:**")
+    selected_coders = st.multiselect(
+        "Koderzy",
+        options=coders,
+        default=coders[:min(3, len(coders))],
+        key="intercoder_preview_coders",
+        label_visibility="collapsed"
+    )
+    
+    if len(selected_coders) < 2:
+        st.info("Wybierz co najmniej 2 koderów do porównania")
+        return
+    
+    # Find common oids between selected coders
+    common_oids = None
+    for coder in selected_coders:
+        coder_oids = set(manual_df[manual_df['coder_id'] == coder]['oid'])
+        if common_oids is None:
+            common_oids = coder_oids
+        else:
+            common_oids = common_oids & coder_oids
+    
+    common_oids = sorted(list(common_oids))
+    
+    if len(common_oids) == 0:
+        st.warning("Brak wspólnych elementów między wybranymi koderami")
+        return
+    
+    st.success(f"Znaleziono **{len(common_oids)}** wspólnych elementów między wybranymi koderami")
+    
+    # Create pivot dataframe for analysis
+    # Each row is an oid, columns are coder values
     all_cols = []
     for cat_type in categories:
         if cat_type in manual_cols:
             all_cols.extend(manual_cols[cat_type])
     
-    if all_cols:
-        selected_col = st.selectbox(
-            "Wybierz kategorię",
-            all_cols,
-            format_func=lambda x: labels.get(x, x),
-            key="intercoder_heatmap_col"
-        )
+    # Build comparison dataframe
+    comparison_data = []
+    
+    for oid in common_oids:
+        row = {'oid': oid}
         
-        # Create agreement matrix
-        pivot = manual_df.pivot_table(
-            index='coder_id',
-            columns='oid',
-            values=selected_col,
-            aggfunc='first'
-        )
+        # Get text (from first coder)
+        first_coder_data = manual_df[(manual_df['oid'] == oid) & (manual_df['coder_id'] == selected_coders[0])]
+        if len(first_coder_data) > 0 and 'text' in first_coder_data.columns:
+            row['text'] = first_coder_data['text'].iloc[0]
+        else:
+            row['text'] = ""
         
-        agreement_matrix = pd.DataFrame(
-            index=pivot.index,
-            columns=pivot.index,
-            dtype=float
-        )
+        # Get values for each coder
+        for coder in selected_coders:
+            coder_data = manual_df[(manual_df['oid'] == oid) & (manual_df['coder_id'] == coder)]
+            if len(coder_data) > 0:
+                for col in all_cols:
+                    if col in coder_data.columns:
+                        row[f"{col}_{coder}"] = coder_data[col].iloc[0]
         
-        for c1 in pivot.index:
-            for c2 in pivot.index:
-                if c1 == c2:
-                    agreement_matrix.loc[c1, c2] = 1.0
+        # Calculate agreement score
+        agree_full = 0
+        agree_partial = 0
+        agree_none = 0
+        agree_total = 0
+        
+        for col in all_cols:
+            values = []
+            for coder in selected_coders:
+                key = f"{col}_{coder}"
+                if key in row and pd.notna(row.get(key)):
+                    values.append(int(row[key]))
+            
+            if len(values) >= 2:
+                agree_total += 1
+                if len(set(values)) == 1:
+                    agree_full += 1
+                elif max(values) - min(values) <= 1:
+                    agree_partial += 1
                 else:
-                    d1 = pivot.loc[c1]
-                    d2 = pivot.loc[c2]
-                    mask = d1.notna() & d2.notna()
-                    if mask.sum() > 0:
-                        agreement_matrix.loc[c1, c2] = (d1[mask] == d2[mask]).mean()
-                    else:
-                        agreement_matrix.loc[c1, c2] = np.nan
+                    agree_none += 1
         
-        # Display heatmap
-        fig = px.imshow(
-            agreement_matrix.values.astype(float),
-            x=agreement_matrix.columns,
-            y=agreement_matrix.index,
-            labels=dict(x="Koder", y="Koder", color="Zgodność"),
-            aspect="auto",
-            color_continuous_scale="RdYlGn",
-            zmin=0,
-            zmax=1,
-            text_auto='.2f'
-        )
-        fig.update_layout(
-            title=f"Macierz zgodności - {labels.get(selected_col, selected_col)}",
-            template="plotly_dark",
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)'
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        row['_agree_full'] = agree_full
+        row['_agree_partial'] = agree_partial
+        row['_agree_none'] = agree_none
+        row['_agree_total'] = agree_total
+        row['_agree_pct'] = (agree_full / agree_total * 100) if agree_total > 0 else 0
         
-        # Interpretation
-        avg_off_diag = agreement_matrix.values[np.triu_indices_from(agreement_matrix.values, k=1)].mean()
-        st.caption(f"Średnia zgodność (poza diagonalą): {avg_off_diag:.1%}")
+        comparison_data.append(row)
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    
+    # === FILTERING AND SORTING ===
+    st.markdown("#### 🔧 Filtrowanie i sortowanie")
+    
+    filter_col1, filter_col2, filter_col3 = st.columns([1.5, 1.5, 1])
+    
+    with filter_col1:
+        agreement_filter = st.selectbox(
+            "Filtruj po zgodności",
+            options=[
+                "Wszystkie",
+                "🟢 Tylko pełna zgodność",
+                "🟡 Częściowa zgodność (min. 1)",
+                "🔴 Brak zgodności (min. 1)",
+                "🔴🔴 Głównie niezgodne (>50%)"
+            ],
+            key="intercoder_preview_filter"
+        )
+    
+    with filter_col2:
+        sort_option = st.selectbox(
+            "Sortuj według",
+            options=[
+                "Kolejność",
+                "% zgodności (rosnąco)",
+                "% zgodności (malejąco)",
+                "Niezgodności (malejąco)"
+            ],
+            key="intercoder_preview_sort"
+        )
+    
+    with filter_col3:
+        text_search = st.text_input("🔎 Szukaj", key="intercoder_preview_search", placeholder="Wpisz frazę...")
+    
+    # Apply filters
+    filtered_df = comparison_df.copy()
+    
+    if agreement_filter == "🟢 Tylko pełna zgodność":
+        filtered_df = filtered_df[(filtered_df['_agree_none'] == 0) & (filtered_df['_agree_partial'] == 0)]
+    elif agreement_filter == "🟡 Częściowa zgodność (min. 1)":
+        filtered_df = filtered_df[filtered_df['_agree_partial'] > 0]
+    elif agreement_filter == "🔴 Brak zgodności (min. 1)":
+        filtered_df = filtered_df[filtered_df['_agree_none'] > 0]
+    elif agreement_filter == "🔴🔴 Głównie niezgodne (>50%)":
+        filtered_df = filtered_df[filtered_df['_agree_none'] > filtered_df['_agree_total'] / 2]
+    
+    if text_search and 'text' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['text'].astype(str).str.contains(text_search, case=False, na=False)]
+    
+    # Apply sorting
+    if sort_option == "% zgodności (rosnąco)":
+        filtered_df = filtered_df.sort_values('_agree_pct', ascending=True)
+    elif sort_option == "% zgodności (malejąco)":
+        filtered_df = filtered_df.sort_values('_agree_pct', ascending=False)
+    elif sort_option == "Niezgodności (malejąco)":
+        filtered_df = filtered_df.sort_values('_agree_none', ascending=False)
+    
+    filtered_df = filtered_df.reset_index(drop=True)
+    
+    # Info box
+    st.info(f"""
+    **Wyświetlanie {len(filtered_df)} z {len(comparison_df)} elementów** | 
+    Kolory: 🟢 pełna zgodność | 🟡 częściowa (±1) | 🔴 brak zgodności
+    """)
+    
+    if len(filtered_df) == 0:
+        st.warning("Brak elementów spełniających kryteria")
+        return
+    
+    # Navigation
+    elements_per_page = 6
+    max_page = max(1, (len(filtered_df) + elements_per_page - 1) // elements_per_page)
+    
+    col_nav1, col_nav2 = st.columns([1, 3])
+    with col_nav1:
+        page = st.number_input("Strona", min_value=1, max_value=max_page, value=1, key="intercoder_preview_page")
+    with col_nav2:
+        start_el = (page-1)*elements_per_page + 1
+        end_el = min(page*elements_per_page, len(filtered_df))
+        st.markdown(f"**Elementy {start_el} - {end_el} z {len(filtered_df)}**")
+    
+    start_idx = (page - 1) * elements_per_page
+    indices = list(range(start_idx, min(start_idx + elements_per_page, len(filtered_df))))
+    
+    st.markdown("---")
+    
+    # Value labels
+    value_to_label = {0: 'Brak', 1: 'Obecna', 2: 'Silna'}
+    
+    # Get automatic columns if needed
+    sent_cols = data_loader.get_sentiment_columns() if include_auto else {}
+    emo_cols = data_loader.get_emotion_columns() if include_auto else {}
+    
+    # Display elements in 2 columns
+    for row in range(3):
+        cols = st.columns(2)
+        
+        for col_idx in range(2):
+            element_idx = row * 2 + col_idx
+            if element_idx >= len(indices):
+                break
+            
+            idx = indices[element_idx]
+            if idx >= len(filtered_df):
+                continue
+            
+            row_data = filtered_df.iloc[idx]
+            
+            with cols[col_idx]:
+                with st.container():
+                    text = str(row_data.get('text', ''))[:300]
+                    if len(str(row_data.get('text', ''))) > 300:
+                        text += "..."
+                    
+                    oid = str(row_data['oid'])[:12] + "..."
+                    agree_pct = int(row_data.get('_agree_pct', 0))
+                    
+                    with st.expander(f"📝 #{idx + 1} | {oid} | Zgodność: {agree_pct}%", expanded=True):
+                        st.markdown(f"""
+                        <div style='
+                            background-color: rgba(255, 255, 255, 0.05); 
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            padding: 12px; 
+                            border-radius: 8px; 
+                            margin-bottom: 12px; 
+                            font-size: 0.9em;
+                        '>{text}</div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Build comparison table
+                        table_data = []
+                        
+                        for col in all_cols:
+                            cat_label = labels.get(col, col)
+                            emoji = "🎭" if 'sentiment' in col else "💭"
+                            row_values = {'Kategoria': f"{emoji} {cat_label}"}
+                            values_list = []
+                            
+                            # Add values from each coder
+                            for coder in selected_coders:
+                                key = f"{col}_{coder}"
+                                if key in row_data:
+                                    val = row_data[key]
+                                    if pd.notna(val):
+                                        val = int(val)
+                                        row_values[coder] = value_to_label.get(val, str(val))
+                                        values_list.append(val)
+                                    else:
+                                        row_values[coder] = "—"
+                                else:
+                                    row_values[coder] = "—"
+                            
+                            # Add automatic sources if enabled
+                            if include_auto and parquet_df is not None:
+                                oid_full = row_data['oid']
+                                parquet_row = parquet_df[parquet_df['post_id'].astype(str) == str(oid_full)]
+                                
+                                if len(parquet_row) > 0:
+                                    # SENT_EMO
+                                    if 'sentiment' in col:
+                                        idx_in_list = manual_cols['sentiment'].index(col) if col in manual_cols.get('sentiment', []) else -1
+                                        if idx_in_list >= 0 and 'sent_emo' in sent_cols:
+                                            auto_col = sent_cols['sent_emo'][idx_in_list] if idx_in_list < len(sent_cols.get('sent_emo', [])) else None
+                                    else:
+                                        idx_in_list = manual_cols['emotion'].index(col) if col in manual_cols.get('emotion', []) else -1
+                                        if idx_in_list >= 0 and 'sent_emo' in emo_cols:
+                                            auto_col = emo_cols['sent_emo'][idx_in_list] if idx_in_list < len(emo_cols.get('sent_emo', [])) else None
+                                    
+                                    # Try to get SENT_EMO value
+                                    for auto_source, auto_name in [('sent_emo', 'SENT_EMO'), ('sent_emo_llm', 'SENT_EMO_LLM')]:
+                                        try:
+                                            if 'sentiment' in col:
+                                                idx_in_list = manual_cols['sentiment'].index(col)
+                                                auto_col = sent_cols[auto_source][idx_in_list]
+                                            else:
+                                                idx_in_list = manual_cols['emotion'].index(col)
+                                                auto_col = emo_cols[auto_source][idx_in_list]
+                                            
+                                            if auto_col in parquet_row.columns:
+                                                auto_val = parquet_row[auto_col].iloc[0]
+                                                if pd.notna(auto_val):
+                                                    auto_val = int(auto_val)
+                                                    row_values[auto_name] = value_to_label.get(auto_val, str(auto_val))
+                                                    values_list.append(auto_val)
+                                                else:
+                                                    row_values[auto_name] = "—"
+                                            else:
+                                                row_values[auto_name] = "—"
+                                        except (IndexError, KeyError):
+                                            row_values[auto_name] = "—"
+                                else:
+                                    row_values['SENT_EMO'] = "—"
+                                    row_values['SENT_EMO_LLM'] = "—"
+                            
+                            # Calculate agreement
+                            numeric_vals = [v for v in values_list if isinstance(v, (int, float))]
+                            if len(numeric_vals) >= 2:
+                                if len(set(numeric_vals)) == 1:
+                                    row_values['Zgodność'] = '🟢'
+                                elif max(numeric_vals) - min(numeric_vals) <= 1:
+                                    row_values['Zgodność'] = '🟡'
+                                else:
+                                    row_values['Zgodność'] = '🔴'
+                            else:
+                                row_values['Zgodność'] = '—'
+                            
+                            table_data.append(row_values)
+                        
+                        if table_data:
+                            table_df = pd.DataFrame(table_data)
+                            
+                            def color_values(val):
+                                if val == 'Brak':
+                                    return 'background-color: #1b5e20; color: white'
+                                elif val == 'Obecna':
+                                    return 'background-color: #e65100; color: white'
+                                elif val == 'Silna':
+                                    return 'background-color: #b71c1c; color: white'
+                                return ''
+                            
+                            def color_agreement(val):
+                                if val == '🟢':
+                                    return 'background-color: #2e7d32; color: white'
+                                elif val == '🟡':
+                                    return 'background-color: #f9a825; color: black'
+                                elif val == '🔴':
+                                    return 'background-color: #c62828; color: white'
+                                return ''
+                            
+                            styled_df = table_df.style
+                            style_method = getattr(styled_df, 'map', None) or styled_df.applymap
+                            
+                            # Apply styling to coder columns
+                            for coder in selected_coders:
+                                if coder in table_df.columns:
+                                    styled_df = style_method(color_values, subset=[coder])
+                            
+                            # Apply styling to automatic columns if present
+                            if include_auto:
+                                for auto_col in ['SENT_EMO', 'SENT_EMO_LLM']:
+                                    if auto_col in table_df.columns:
+                                        styled_df = style_method(color_values, subset=[auto_col])
+                            
+                            if 'Zgodność' in table_df.columns:
+                                styled_df = style_method(color_agreement, subset=['Zgodność'])
+                            
+                            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                
+                st.markdown("")
 
 
 def show_metrics_overview(df, categories, sources):
