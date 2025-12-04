@@ -331,13 +331,13 @@ SENTIMENTS = {
 
 EMOTIONS = {
     "joy": {"pl": "Radość", "icon": "😄", "bg": "rgba(190, 180, 80, 0.07)", "border": "#a09a5a"},
-    "trust": {"pl": "Zaufanie", "icon": "🤝", "bg": "rgba(76, 140, 80, 0.07)", "border": "#4a7a4d"},
+    "sadness": {"pl": "Smutek", "icon": "😢", "bg": "rgba(70, 80, 130, 0.07)", "border": "#4a5575"},
+    "anger": {"pl": "Gniew", "icon": "😠", "bg": "rgba(180, 67, 60, 0.07)", "border": "#8a4a46"},
+    "fear": {"pl": "Strach", "icon": "😨", "bg": "rgba(60, 110, 160, 0.07)", "border": "#4a6a8a"},
     "anticipation": {"pl": "Oczekiwanie", "icon": "🔮", "bg": "rgba(120, 60, 130, 0.07)", "border": "#6a4a70"},
     "surprise": {"pl": "Zaskoczenie", "icon": "😲", "bg": "rgba(180, 120, 60, 0.07)", "border": "#9a7a50"},
-    "fear": {"pl": "Strach", "icon": "😨", "bg": "rgba(60, 110, 160, 0.07)", "border": "#4a6a8a"},
-    "sadness": {"pl": "Smutek", "icon": "😢", "bg": "rgba(70, 80, 130, 0.07)", "border": "#4a5575"},
-    "disgust": {"pl": "Wstręt", "icon": "🤢", "bg": "rgba(110, 140, 80, 0.07)", "border": "#5a7a4a"},
-    "anger": {"pl": "Gniew", "icon": "😠", "bg": "rgba(180, 67, 60, 0.07)", "border": "#8a4a46"}
+    "trust": {"pl": "Zaufanie", "icon": "🤝", "bg": "rgba(76, 140, 80, 0.07)", "border": "#4a7a4d"},
+    "disgust": {"pl": "Wstręt", "icon": "🤢", "bg": "rgba(110, 140, 80, 0.07)", "border": "#5a7a4a"}
 }
 
 # Color mapping for slider thumb based on value
